@@ -206,5 +206,65 @@ class SameNameDifferentTypeTest(unittest.TestCase):
                 self.assertEqual(row.other_type_total, 2)
 
 
+class ChannelBoxKeyableFilterTest(unittest.TestCase):
+    """The "Keyable only" filter must also keep channelBox attributes.
+
+    Measured on Arnold area lights: ``aiExposure`` reports ``keyable=False`` but
+    ``channelBox=True`` — it can be keyframed from the Channel Box, so the filter
+    must not hide it (the tooltip promises "can be keyframed").
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from maya.api import OpenMaya as om2
+
+        cmds = support.new_scene()
+        cls.node = cmds.group(em=True, name="ChannelBoxFilterNode")
+        cmds.addAttr(cls.node, longName="cbKeyableFloat", attributeType="float",
+                     keyable=True)
+        cmds.addAttr(cls.node, longName="cbPlainFloat", attributeType="float",
+                     keyable=False)
+
+        # addAttr has no channelBox flag (measured) - create it through the API,
+        # the same way MtoA creates attributes such as aiExposure.
+        selection = om2.MSelectionList()
+        selection.add(cls.node)
+        dep = om2.MFnDependencyNode(selection.getDependNode(0))
+        numeric = om2.MFnNumericAttribute()
+        attr = numeric.create("cbOnlyFloat", "cbof", om2.MFnNumericData.kFloat, 0.0)
+        numeric.keyable = False
+        numeric.channelBox = True
+        dep.addAttribute(attr)
+        cmds.flushUndo()
+
+    def _filtered_search(self, pattern: str):
+        engine = SearchEngine(AttributeScanner())
+        result = SelectionManager.resolve([self.node])
+        records = DagTraversal.collect(
+            [record.node for record in result.roots],
+            TraversalScope.SELECTION_AND_DESCENDANTS,
+        )
+        return engine.search(records, pattern, SearchFilters(only_keyable=True))
+
+    def test_channel_box_attribute_passes_the_filter(self) -> None:
+        """keyable=False + channelBox=True (Arnold Exposure style) must pass."""
+        found = self._filtered_search("cbOnlyFloat")
+        self.assertEqual(len(found.attributes), 1)
+        definition = found.attributes[0].definition
+        self.assertFalse(definition.is_keyable)
+        self.assertTrue(definition.is_channel_box)
+
+    def test_keyable_attribute_still_passes(self) -> None:
+        """A strictly keyable attribute keeps passing, as before."""
+        found = self._filtered_search("cbKeyableFloat")
+        self.assertEqual(len(found.attributes), 1)
+        self.assertTrue(found.attributes[0].definition.is_keyable)
+
+    def test_plain_attribute_is_hidden(self) -> None:
+        """Neither keyable nor channelBox: the filter must keep hiding it."""
+        found = self._filtered_search("cbPlainFloat")
+        self.assertEqual(len(found.attributes), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -182,6 +182,7 @@ class AttributeDefinition:
     default_repr: str = ""
     is_dynamic: bool = False
     is_keyable: bool = False
+    is_channel_box: bool = False
     is_writable: bool = True
     is_readable: bool = True
     is_hidden: bool = False

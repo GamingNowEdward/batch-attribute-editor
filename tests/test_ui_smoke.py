@@ -310,6 +310,8 @@ class UIPanelTest(unittest.TestCase):
         search = SearchPanel()
         self.assertEqual(search.pattern(), "")
         self.assertTrue(search.filters().hide_unsupported)
+        self.assertTrue(search.filters().only_keyable,
+                        "Keyable only must be enabled by default")
 
         details = DetailsPanel()
         details.clear()

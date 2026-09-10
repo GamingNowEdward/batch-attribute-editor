@@ -205,7 +205,7 @@ Search input → select input
 | Filter | Effect | Cost |
 | --- | --- | --- |
 | Writable only | hides attributes Maya declares read-only | cheap |
-| Keyable only | keeps only attributes that can be keyframed | cheap |
+| Keyable only | keeps attributes that can be keyframed (keyable or shown in the Channel Box, e.g. Arnold Exposure; on by default) | cheap |
 | User defined only | keeps only User Defined (dynamically added) attributes | cheap |
 | Hide unsupported | hides types that cannot be edited such as matrix / message (on by default) | cheap |
 | Hide compound children | hides children such as `translateX` and keeps only the parent attribute | cheap |

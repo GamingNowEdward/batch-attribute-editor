@@ -200,7 +200,7 @@ Succeeded:175  Skipped:7  Failed:0  (175 nodes touched)  Elapsed 12 ms
 | 过滤器 | 作用 | 代价 |
 | --- | --- | --- |
 | 只显示可写 | 隐藏 Maya 声明为只读的属性 | 便宜 |
-| 只显示 Keyable | 只保留可设关键帧的属性 | 便宜 |
+| 只显示 Keyable | 只保留可设关键帧的属性（keyable 或显示于 Channel Box，如 Arnold 的 Exposure，默认开） | 便宜 |
 | 只显示自定义 | 只保留 User Defined（动态添加）属性 | 便宜 |
 | 隐藏不支持的类型 | 隐藏 matrix / message 等无法编辑的类型（默认开） | 便宜 |
 | 隐藏 Compound 子属性 | 隐藏 `translateX` 这类子属性，只保留父属性 | 便宜 |

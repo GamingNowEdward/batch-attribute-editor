@@ -112,7 +112,9 @@ class SearchPanel(QtWidgets.QGroupBox):
         self.only_writable = self._checkbox("Writable only",
                                             "Hide attributes Maya reports as read-only")
         self.only_keyable = self._checkbox("Keyable only",
-                                           "Keep only attributes that can be keyframed")
+                                           "Keep attributes that can be keyframed "
+                                           "(keyable or shown in the Channel Box)")
+        self.only_keyable.setChecked(True)
         self.only_user_defined = self._checkbox("User defined only",
                                                 "Keep only User Defined attributes")
         self.hide_unsupported = self._checkbox("Hide unsupported",

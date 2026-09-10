@@ -110,7 +110,9 @@ class SearchFilters:
         """Definition-level filtering (cheap)."""
         if self.only_writable and not definition.is_writable:
             return False
-        if self.only_keyable and not definition.is_keyable:
+        if self.only_keyable and not (definition.is_keyable or definition.is_channel_box):
+            # channelBox attributes are not "keyable" in the strict Maya sense but
+            # can be keyframed from the Channel Box (e.g. Arnold's aiExposure).
             return False
         if self.only_user_defined and not definition.is_dynamic:
             return False

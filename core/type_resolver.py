@@ -128,6 +128,7 @@ class TypeResolver:
             enum_fields=enum_fields,
             is_dynamic=bool(_safe(lambda: fat.dynamic, False)),
             is_keyable=bool(_safe(lambda: fat.keyable, False)),
+            is_channel_box=bool(_safe(lambda: fat.channelBox, False)),
             is_writable=bool(_safe(lambda: fat.writable, True)),
             is_readable=bool(_safe(lambda: fat.readable, True)),
             is_hidden=bool(_safe(lambda: fat.hidden, False)),
