@@ -136,7 +136,7 @@ BatchAttributeEditor/      ← add this directory to sys.path
     utils/
         maya_utils.py      node/plug name derivation, UUID re-checks
         logging_utils.py   two-channel logging (user-readable / technical detail)
-    tests/                 136 tests (run under mayapy)
+    tests/                 142 tests (run under mayapy)
     tools/selfcheck.py     self-check script that runs inside a real Maya
     docs/                  documentation (install / usage / architecture / limitations)
 ```
@@ -171,7 +171,7 @@ To run a single module:
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-Current result: **all 136 tests pass** (of which the 12 widget tests that need a real GUI are skipped
+Current result: **all 142 tests pass** (of which the 12 widget tests that need a real GUI are skipped
 in batch mode).
 
 | Test file | Coverage |
@@ -201,7 +201,7 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | Area | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 136 tests pass under Maya 2024.2 mayapy |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 142 tests pass under Maya 2024.2 mayapy |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (including a 150-node batch and partial-failure scenarios) |
 | UI module import and factory dispatch | ✅ verified automatically |
 | **UI window construction and display** | ✅ confirmed in a real Maya 2024.2 GUI (`tools/selfcheck.py`, PySide2 5.15.2) |

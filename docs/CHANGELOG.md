@@ -17,11 +17,26 @@ has been `1.0.0` since the initial commit).
   Editor and press Enter. The command calls `main.reload_and_launch()`, which discards this
   project's cached modules first, so edits take effect without restarting Maya. The instructions
   now match [`INSTALL.md`](INSTALL.md) option A. Affects `README.md` and `README.zh.md`.
+- Documented test count refreshed from the stale 136 to the actual **142** (12 widget tests are
+  skipped in batch mode): README, INSTALL and LIMITATIONS (en + zh).
+- `docs/USAGE.md` / `USAGE.zh.md`: expanded the Attribute Search reference — match-mode notes and a
+  per-filter explanation (definition-level vs per-node validation, defaults, and the all-nodes rule
+  for Locked / Connected).
+- Chinese docs terminology: project-owned UI / feature names are now written in Chinese with the
+  English label on first mention (README.zh, USAGE.zh, INSTALL.zh, ARCHITECTURE.zh,
+  LIMITATIONS.zh); ASCII UI mock, program output and historical changelog entries are unchanged.
 
 ### Added
 
 - `LICENSE`: the project is released under the MIT License.
 - `docs/CHANGELOG.md` and `docs/CHANGELOG.zh.md` to record notable changes.
+
+### Fixed
+
+- The **"Hide compound children"** search filter now actually works: `AttributeDefinition` gained
+  `is_compound_child` (read via `MPlug.isChild`) and `SearchFilters.accepts_definition` drops child
+  attributes such as `translateX` / `customVectorX` while keeping their parent, as
+  `docs/USAGE.md` always described. Covered by two new tests (type resolution + search).
 
 ## [0b31bb0] — 2026-09-11
 

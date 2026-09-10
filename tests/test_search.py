@@ -147,6 +147,23 @@ class SearchEngineTest(unittest.TestCase):
         for item in result.attributes:
             self.assertTrue(item.definition.supports_editing)
 
+    def test_filters_hide_compound_children(self) -> None:
+        """Filter: hide children such as translateX and keep only the parent attribute."""
+        unfiltered = self.engine.search(self.records, "translate")
+        self.assertIn("translateX", {item.name for item in unfiltered.attributes})
+
+        filters = SearchFilters(hide_compound_children=True)
+        names = {item.name for item in self.engine.search(self.records, "translate", filters).attributes}
+        self.assertIn("translate", names)
+        self.assertNotIn("translateX", names)
+        self.assertNotIn("translateY", names)
+        self.assertNotIn("translateZ", names)
+
+        custom = self.engine.search(self.records, "customVector", filters)
+        custom_names = {item.name for item in custom.attributes}
+        self.assertIn("customVector", custom_names)
+        self.assertNotIn("customVectorX", custom_names)
+
     def test_sorting_is_by_node_count_desc(self) -> None:
         """Results are sorted by node count descending so the user sees the widest-reaching attributes first."""
         result = self.engine.search(self.records, "")

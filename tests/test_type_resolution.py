@@ -146,6 +146,17 @@ class TypeResolutionTest(unittest.TestCase):
         for child in definition.children:
             self.assertIs(child.kind, AttributeKind.DOUBLE)
 
+    def test_compound_child_flag(self) -> None:
+        """Compound children are flagged so the "Hide compound children" filter can drop them."""
+        parent = self.describe(self.cube, "translate")
+        self.assertFalse(parent.is_compound_child)
+        child = self.describe(self.cube, "translateX")
+        self.assertTrue(child.is_compound_child)
+        custom = self.describe(self.cube, "customVectorX")
+        self.assertTrue(custom.is_compound_child)
+        scalar = self.describe(self.cube, "visibility")
+        self.assertFalse(scalar.is_compound_child)
+
     def test_multi_attribute(self) -> None:
         """17. Multi: a multi attribute must be flagged as an array, never treated as an ordinary scalar."""
         definition = self.describe(self.cube, "customMulti")

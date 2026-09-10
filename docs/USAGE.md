@@ -55,7 +55,9 @@ were changed by script).
 ### Step 2: Search for attributes
 
 Type an attribute name into the search box. Matching is **case-insensitive** and matches both the
-**long name and the short name**.
+**long name and the short name**. An empty search box lists every attribute (browse mode). Changing
+the pattern (260 ms debounce), the match mode or any filter re-runs the search immediately — no
+Enter key needed.
 
 | Match mode | Behaviour | Example |
 | --- | --- | --- |
@@ -215,6 +217,28 @@ Search input → select input
 The first five can be decided while scanning attribute names and cost almost no time; the last two
 need the plug state checked node by node, so they are off by default — turn them on when you need
 them.
+
+### Filter details
+
+* **Writable only** — hides attributes Maya reports as read-only (`MFnAttribute.writable == False`).
+  "Writable" only describes the definition: on a given node the attribute can still be locked or
+  connected, in which case it is skipped at write time with the reason listed in Preview.
+* **Keyable only** (on by default) — keeps attributes that are keyable **or** shown in the Channel
+  Box. Strictly speaking a channelBox attribute is not keyable, but both can be keyframed from the
+  Channel Box (Arnold reports `aiExposure` as `keyable=False`, `channelBox=True`).
+* **User defined only** — keeps only attributes added dynamically (`addAttr`), hiding Maya's
+  built-ins such as `translate` or `visibility`.
+* **Hide unsupported** (on by default) — hides types that cannot produce an editor: Matrix /
+  Message / Unknown, and a Compound without children.
+* **Hide compound children** — hides real child attributes such as `translateX` / `customVectorX`
+  and keeps their parent (`translate`), so the parent's X/Y/Z editor can be used as a whole. A
+  standalone dynamic attribute that merely shares such a name is not affected.
+* **Hide locked** — a row is hidden only when the attribute is locked on **all** matching nodes (or
+  every writable channel is blocked). If even one node is writable the row stays, and the locked
+  nodes are skipped with a reason during Preview / Apply.
+* **Hide connected** — the same all-nodes rule for incoming connections. The check is
+  channel-level, which also covers Maya's caveat that a compound parent plug reports
+  `isConnected == False` when only a child plug is connected.
 
 ---
 

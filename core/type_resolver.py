@@ -136,6 +136,7 @@ class TypeResolver:
             is_color=bool(_safe(lambda: fat.usedAsColor, False)),
             is_multi=bool(_safe(lambda: plug.isArray, False)) if plug is not None else False,
             is_compound=bool(_safe(lambda: plug.isCompound, False)) if plug is not None else False,
+            is_compound_child=bool(_safe(lambda: plug.isChild, False)) if plug is not None else False,
         )
 
         cls._apply_bounds(definition, attribute)

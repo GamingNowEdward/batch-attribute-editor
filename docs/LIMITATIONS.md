@@ -12,7 +12,7 @@ made**, together with the measurements behind them. Every entry tries to give bo
 
 | Part | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 136 automated tests pass under mayapy on Maya 2024.2 |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 142 automated tests pass under mayapy on Maya 2024.2 |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (150-node batch, partial-failure scenario) |
 | UI module imports and factory dispatch | ✅ verified automatically |
 | **UI window construction and display** | ✅ confirmed in a real Maya 2024.2 GUI (PySide2 5.15.2) |

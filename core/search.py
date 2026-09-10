@@ -119,6 +119,8 @@ class SearchFilters:
             return False
         if self.hide_unsupported and not definition.supports_editing:
             return False
+        if self.hide_compound_children and definition.is_compound_child:
+            return False
         if self.kinds and definition.kind not in self.kinds:
             return False
         return True

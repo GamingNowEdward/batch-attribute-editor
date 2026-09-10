@@ -127,10 +127,10 @@ main.launch()
 窗口出现后：
 
 1. 在视口里选中任意一个带层级的节点（例如一个 group）；
-2. **Scope** 选择「当前选择 + 所有后代（含 Shape）」；
+2. **范围（Scope）** 选择「当前选择 + 所有后代（含 Shape）」；
 3. 工具会自动扫描当前选择，状态栏应显示扫描到的节点数，例如
    `17 nodes, 11 transforms, 6 shapes · 1 root node`；
-4. 在搜索框输入 `visibility`，Results 里应出现 `visibility | Boolean | <节点数>`。
+4. 在搜索框输入 `visibility`，**结果（Results）**里应出现 `visibility | Boolean | <节点数>`。
 
 ### 3.2 完整自检（会建临时节点，用完即删）
 
@@ -142,7 +142,7 @@ tools.selfcheck.run(create_test_nodes=True)
 ```
 
 自检会依次验证：模块导入、主窗口构建、DAG 遍历（含 Shape）、属性搜索、类型识别、
-预览、批量写入，以及**"整批写入只占一次 Undo"**，最后删除临时节点。
+预览、批量写入，以及**"整批写入只占一次撤销"**，最后删除临时节点。
 输出以 `All checks passed` 结尾即为正常。
 
 ### 3.3 开发者：运行自动化测试
@@ -153,7 +153,7 @@ tools.selfcheck.run(create_test_nodes=True)
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py
 ```
 
-预期输出 `Ran 136 tests ... OK`（其中 12 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
+预期输出 `Ran 142 tests ... OK`（其中 12 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
 
 这些测试**不会**影响你正在使用的 Maya 会话：`mayapy` 是独立进程，使用自己的临时场景。
 

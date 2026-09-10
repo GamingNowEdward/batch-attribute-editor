@@ -15,11 +15,24 @@
   （已带本项目绝对路径）粘贴到 Maya 的 Script Editor 回车即可。命令调用 `main.reload_and_launch()`，
   会先丢弃本项目的模块缓存再重新导入，因此改完代码无需重启 Maya 即可生效。
   该说明与 [`INSTALL.zh.md`](INSTALL.zh.md) 方式 A 保持一致。涉及 `README.md` 与 `README.zh.md`。
+- 文档中的测试数量从过时的 136 更新为实际的 **142**（12 个 widget 测试在 batch 模式下跳过）：
+  README、INSTALL、LIMITATIONS（中英）。
+- `docs/USAGE.md` / `USAGE.zh.md`：补全属性搜索（Attribute Search）参考 —— 匹配模式说明与逐个过滤器详解
+  （定义层与逐节点校验、默认值、锁定 / 已连接（Locked / Connected）的「所有节点」规则）。
+- 中文文档术语统一：项目自身的 UI / 功能名改用中文，首次出现附英文对照（README.zh、USAGE.zh、
+  INSTALL.zh、ARCHITECTURE.zh、LIMITATIONS.zh；ASCII 界面示意图、程序输出与 changelog 历史条目保持原样）。
 
 ### 新增
 
 - `LICENSE`：项目以 MIT 许可证发布。
 - `docs/CHANGELOG.md` 与 `docs/CHANGELOG.zh.md`，用于记录重要更改。
+
+### 修复
+
+- **「隐藏复合属性子项」（Hide compound children）**过滤器现在真正生效：`AttributeDefinition` 新增
+  `is_compound_child`（通过 `MPlug.isChild` 读取），`SearchFilters.accepts_definition`
+  会丢弃 `translateX` / `customVectorX` 这类子属性并保留其父属性，与 `docs/USAGE.zh.md`
+  一直以来的描述一致。新增两个测试覆盖（类型识别 + 搜索）。
 
 ## [0b31bb0] — 2026-09-11
 

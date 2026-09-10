@@ -12,8 +12,8 @@
 ## 1. 产品目标
 
 在用户选中的节点层级中，递归发现节点、按名称搜索属性、识别属性的**真实 Maya 类型**，
-为不同类型生成对应编辑器，安全跳过 Locked / Connected / Missing / 类型不兼容属性，
-一次 Apply 完成批量修改，并且**整批修改只占一次 Undo**。
+为不同类型生成对应编辑器，安全跳过锁定（Locked）/ 已连接（Connected）/ 缺失（Missing）/
+类型不兼容属性，一次应用（Apply）完成批量修改，并且**整批修改只占一次撤销（Undo）**。
 
 核心不是 `for node: cmds.setAttr(...)`，而是：
 
@@ -44,7 +44,7 @@ __init__.py     可选门面：注入 sys.path 后转发到 main（支持 import
 ```
 UI Layer (PySide6 / PySide2)
   main_window.py            编排：只调用 Core，不直接操作 Maya 节点
-  panels.py                 Scope / Search / Details / Preview / Log 区块
+  panels.py                 范围 / 搜索 / 详情 / 预览 / 日志 区块
   attribute_model.py        搜索结果 → Qt 表格模型
   editors/*                 按属性类型动态生成的编辑器（ValueEditorFactory）
         │  （只调用 Core 的公开 API，不出现 cmds.setAttr）
@@ -199,16 +199,16 @@ if attr.isNull():                   # MObject.isNull() 是方法
 
 ---
 
-## 6. 写入机制与 Undo（本项目的关键决策）
+## 6. 写入机制与撤销（本项目的关键决策）
 
 ### 6.1 实测结论
 
-| 写入方式 | 是否进入 Undo 队列 |
+| 写入方式 | 是否进入撤销队列 |
 | --- | --- |
 | `MPlug.setFloat/setInt/setBool/setString/...` | **否**（连续 5 次写入后 `undo()` 立即失败，pops=0） |
-| `cmds.setAttr(...)` | **是**（5 次写入 = 5 次 undo，pops=5） |
-| `cmds.setAttr` 包在 `undoInfo(openChunk/closeChunk)` 内 | **整块 = 1 次 undo**（50 次写入，pops=1） |
-| 块内混有失败写入 | 成功的部分仍然**整块 1 次 undo**（pops=1） |
+| `cmds.setAttr(...)` | **是**（5 次写入 = 5 次撤销，pops=5） |
+| `cmds.setAttr` 包在 `undoInfo(openChunk/closeChunk)` 内 | **整块 = 1 次撤销**（50 次写入，pops=1） |
+| 块内混有失败写入 | 成功的部分仍然**整块 1 次撤销**（pops=1） |
 
 **因此：写入统一使用 `cmds.setAttr`，并且整批包在一个 Undo Chunk 里。**
 
@@ -242,7 +242,7 @@ if attr.isNull():                   # MObject.isNull() 是方法
   "循环 closeChunk 直到异常"的写法（那会挂住 Maya 主线程）。
 * 块内任何单个写入失败都被捕获并记录，**不中断整批**，也不影响该块的撤销完整性。
 * 已知限制：在 commandPort / 无完整事件循环的上下文里，从 Qt 回调内触发的撤销队列可能不可靠
-  （兄弟项目 `attributeManager_maya` 亦记录过同类现象）。真实 GUI 交互下的 Undo 需人工确认，
+  （兄弟项目 `attributeManager_maya` 亦记录过同类现象）。真实 GUI 交互下的撤销需人工确认，
   自动化测试覆盖到 mayapy 层面为止。
 
 ---
@@ -256,11 +256,11 @@ if attr.isNull():                   # MObject.isNull() 是方法
 
 | 状态 | 判定依据 | 默认行为 |
 | --- | --- | --- |
-| Missing | `dep.attribute(name).isNull()` | 跳过，计入 Missing |
-| Not readable | `MFnAttribute.readable == False` | 跳过 |
-| Not writable | `MFnAttribute.writable == False` | 跳过 |
-| Locked | `plug.isLocked == True` | 跳过并报原因（不自动 unlock） |
-| Connected | `plug.isConnected` 或 `plug.numConnectedChildren() > 0` 或 `isFreeToChange()!=0` | 跳过并报原因（不自动断开） |
+| 缺失 | `dep.attribute(name).isNull()` | 跳过，计入缺失 |
+| 不可读 | `MFnAttribute.readable == False` | 跳过 |
+| 不可写 | `MFnAttribute.writable == False` | 跳过 |
+| 锁定 | `plug.isLocked == True` | 跳过并报原因（不自动 unlock） |
+| 已连接 | `plug.isConnected` 或 `plug.numConnectedChildren() > 0` 或 `isFreeToChange()!=0` | 跳过并报原因（不自动断开） |
 | 类型不兼容 | 该节点上属性的 `AttributeKind` ≠ 用户选定项的 kind | 跳过，不做隐式转换 |
 | Multi 元素缺失 | `elementByLogicalIndex(i).isNull()` | 跳过（第一版不创建数组元素） |
 
@@ -286,16 +286,16 @@ if attr.isNull():                   # MObject.isNull() 是方法
 策略：
 
 1. `ScanCache` 缓存"每个节点的属性名 → 轻量类型摘要"（纯 Python 数据，**不持有 MObject**）。
-2. **正确性优先**：缓存只服务于搜索阶段；Apply 阶段一律**重新解析** plug 并重新校验，
+2. **正确性优先**：缓存只服务于搜索阶段；应用阶段一律**重新解析** plug 并重新校验，
    因此过期缓存永远不会导致错误写入，最坏情况只是搜索结果显示陈旧。
-3. 失效时机：场景新建/打开/导入/引用变化、Undo/Redo、节点增删，以及缓存命中时的
+3. 失效时机：场景新建/打开/导入/引用变化、撤销/重做、节点增删，以及缓存命中时的
    **节点数量校验**（`cmds.ls` 计数很便宜）不匹配即失效。
 4. UI **自动跟随 Maya 选择**（`SelectionChanged` scriptJob + 约 350 ms 防抖）：仅选择变化时
    重新解析并搜索，但**保留扫描缓存**，因此大场景下也近乎瞬时；选择集合未变与纯组件选择
-   会被跳过、不触发扫描。显式 Refresh 按钮用于强制清缓存重扫（例如用脚本改动属性之后）。
+   会被跳过、不触发扫描。显式**刷新选择（Refresh Selection）**按钮用于强制清缓存重扫（例如用脚本改动属性之后）。
 
 MObject 生命周期风险：节点被删除后 MObject 失效。因此缓存内**不保存 MObject**，
-并且在 Apply 时对每个节点重新取 `MFnDependencyNode`。
+并且在应用时对每个节点重新取 `MFnDependencyNode`。
 
 ---
 

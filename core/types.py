@@ -189,6 +189,7 @@ class AttributeDefinition:
     is_storable: bool = True
     is_multi: bool = False
     is_compound: bool = False
+    is_compound_child: bool = False
     is_color: bool = False
     children: Tuple["AttributeDefinition", ...] = field(default_factory=tuple)
 

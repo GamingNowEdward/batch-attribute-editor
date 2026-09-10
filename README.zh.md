@@ -4,8 +4,8 @@
 
 > 一个用于 Maya 的**批量属性发现与编辑系统**：在选中的层级里递归找到节点（含 Shape），
 > 按属性名搜索、识别真实 Maya 类型、为不同类型生成对应编辑器、安全跳过
-> Locked / Connected / Missing / 类型不兼容的属性，一次 Apply 完成批量修改，
-> 并且整批修改**只占一次 Undo**。
+> 锁定（Locked）/ 已连接（Connected）/ 缺失（Missing）/ 类型不兼容的属性，一次应用（Apply）完成批量修改，
+> 并且整批修改**只占一次撤销（Undo）**。
 
 目标环境：**Maya 2024 / 2024.2**（Python 3.10、Maya API 2.0、PySide2 5.15.2 或 PySide6）。
 本文档中的所有 API 行为都经过本机 mayapy 实测，依据见 [`docs/ARCHITECTURE.zh.md`](docs/ARCHITECTURE.zh.md)。
@@ -25,7 +25,7 @@ Maya 原生 Attribute Editor 只针对当前单个节点，Channel Box 能显示
 
 ```
 选择节点 → 递归遍历（含 Shape / Intermediate Shape）→ 按属性名搜索
-→ 识别真实类型 → 生成类型对应的编辑器 → 预览将修改/将跳过 → 批量写入 → 一次 Undo
+→ 识别真实类型 → 生成类型对应的编辑器 → 预览将修改/将跳过 → 批量写入 → 一次撤销
 ```
 
 它不是 `for node in nodes: cmds.setAttr(...)`，核心能力是：
@@ -54,10 +54,10 @@ import sys; sys.path.insert(0, r"C:\opencode\BatchAttributeEditor"); import main
 然后：
 
 1. 在视口里选中一个（或多个）节点 —— 例如一个 `Character_GRP`；
-2. 在 **Attribute Search** 里输入 `visibility`；
-3. 在 **Results** 里点中 `visibility   Boolean   182` 这一行；
-4. 在 **Value** 里取消勾选（设为 `False`）；
-5. 点 **预览** —— 会看到 `Will modify 175 nodes (175 channels), skip 7`（其中 5 个 Locked、2 个 Connected）；
+2. 在 **属性搜索（Attribute Search）** 里输入 `visibility`；
+3. 在 **结果（Results）** 里点中 `visibility   Boolean   182` 这一行；
+4. 在 **数值（Value）** 里取消勾选（设为 `False`）；
+5. 点 **预览** —— 会看到 `Will modify 175 nodes (175 channels), skip 7`（其中 5 个锁定、2 个已连接）；
 6. 点 **应用**；
 7. 按一次 `Ctrl+Z` —— 175 个节点全部还原。
 
@@ -77,7 +77,7 @@ import sys; sys.path.insert(0, r"C:\opencode\BatchAttributeEditor"); import main
 | Enum | 下拉框 | 显示枚举名，内部写 Maya 枚举下标 |
 | Angle / Distance / Time | 数值输入 + 单位提示 | 按 Maya 工作单位（度 / 厘米 / 帧） |
 | Float3 / Double3 | X / Y / Z 三个通道 | 每通道可单独勾选 |
-| Color3 | R / G / B + 颜色选择器 | 不擅自 clamp 到 0-1 |
+| Color3 | R / G / B + 颜色选择器（Color Picker） | 不擅自 clamp 到 0-1 |
 | Compound | 子属性逐项编辑 | 通过 `plug.child(i)` 索引定位，不拼名字 |
 | Multi（数组） | 每个已存在的元素一行 | 第一版只编辑已存在的元素 |
 | Matrix / Message | 仅识别与查看 | 不假装支持编辑 |
@@ -112,7 +112,7 @@ BatchAttributeEditor/      ← 把这个目录加入 sys.path
         selection.py       选择解析与去重
         traversal.py       DAG 遍历（含 Shape / Intermediate）
         attributes.py      属性枚举与类型识别
-        compatibility.py   Locked / Connected / Missing / 类型兼容校验
+        compatibility.py   锁定 / 已连接 / 缺失 / 类型兼容校验
         search.py          搜索、匹配、按 (名称, 类型) 聚合
         batch_setter.py    预览与批量写入
         undo.py            Undo Chunk 管理
@@ -121,14 +121,14 @@ BatchAttributeEditor/      ← 把这个目录加入 sys.path
         session.py         Core 门面（UI 只与它交互）
     ui/                    只通过 Core 访问 Maya
         qt.py              PySide6 / PySide2 兼容层
-        panels.py          Scope / Search / Details / Preview / Log 区块
+        panels.py          范围 / 搜索 / 详情 / 预览 / 日志 区块
         attribute_model.py 结果表模型
         editors/           按类型动态生成的编辑器（ValueEditorFactory）
         main_window.py     窗口编排
     utils/
         maya_utils.py      节点/plug 名称派生、UUID 复查
         logging_utils.py   双通道日志（用户可读 / 技术细节）
-    tests/                 136 个测试（mayapy 下运行）
+    tests/                 142 个测试（mayapy 下运行）
     tools/selfcheck.py     在真实 Maya 里运行的自检脚本
     docs/                  文档（安装 / 使用 / 架构 / 已知限制）
 ```
@@ -160,16 +160,16 @@ Core 层与部分 UI 层可在 Maya 自带的 `mayapy` 下完整自动化测试�
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-当前结果：**136 个测试全部通过**（其中 12 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
+当前结果：**142 个测试全部通过**（其中 12 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
 | `test_traversal.py` | 单 Transform、Transform+Shape、Intermediate Shape、多根、去重、5 层深层级、DG 节点 |
 | `test_type_resolution.py` | Float / Int / Bool / String / Enum / Angle / Distance / Time / Float3 / Double3 / Color3 / Compound / Multi / User Defined / Matrix / 缺失属性 / hard range |
 | `test_search.py` | 完整/部分/长短名/大小写/模糊匹配、聚合、同名不同类型拆分 |
-| `test_compatibility.py` | Locked、Connected（含连接源可写、compound 子连接）、Missing、类型不匹配、删除节点、重命名节点 |
+| `test_compatibility.py` | 锁定、已连接（含连接源可写、compound 子连接）、缺失、类型不匹配、删除节点、重命名节点 |
 | `test_batch_setter.py` | 各类型批量写入、颜色不 clamp、multi 不新建元素、缺失/锁定/连接跳过、单点失败不中断整批、同名不同类型只改兼容节点 |
-| `test_undo.py` | 一次 Apply = 一次 Undo、Redo、部分失败仍一次 Undo、150 节点仍一次 Undo、对照组证明 chunk 必要 |
+| `test_undo.py` | 一次应用 = 一次撤销、重做、部分失败仍一次撤销、150 节点仍一次撤销、对照组证明 chunk 必要 |
 | `test_session.py` | 端到端工作流、预览统计自洽、缓存与刷新、1500+ 节点性能 |
 | `test_ui_smoke.py` | UI 模块导入、工厂注册表完整性、结果表模型；widget 测试在 GUI 会话中运行 |
 
@@ -188,14 +188,14 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | 部分 | 状态 |
 | --- | --- |
-| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / Undo） | ✅ 136 个测试在 Maya 2024.2 mayapy 下通过 |
-| Undo 粒度（一次 Apply = 一次 Undo） | ✅ 实测验证（含 150 节点批量与部分失败场景） |
+| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销） | ✅ 142 个测试在 Maya 2024.2 mayapy 下通过 |
+| 撤销粒度（一次应用 = 一次撤销） | ✅ 实测验证（含 150 节点批量与部分失败场景） |
 | UI 模块导入与工厂分发 | ✅ 自动化验证 |
 | **UI 窗口构建与显示** | ✅ 已在真实 Maya 2024.2 GUI 中确认（`tools/selfcheck.py`，PySide2 5.15.2） |
 | **UI 交互细节**（按钮点击、颜色选择器、停靠拖拽） | ⚠️ 未自动化覆盖，需人工体验确认 |
 
 窗口构建与显示的确认过程与结果见 [`docs/LIMITATIONS.zh.md`](docs/LIMITATIONS.zh.md) 第 1 节。
-selfcheck 会构建窗口、在临时节点上跑完整流程（含"整批写入只占一次 Undo"），最后删除临时节点。
+selfcheck 会构建窗口、在临时节点上跑完整流程（含"整批写入只占一次撤销"），最后删除临时节点。
 
 ---
 
@@ -216,7 +216,7 @@ selfcheck 会构建窗口、在临时节点上跑完整流程（含"整批写入
 
 | 文件 | 内容 |
 | --- | --- |
-| [`docs/ARCHITECTURE.zh.md`](docs/ARCHITECTURE.zh.md) | 模块职责、数据流、API 策略、Undo 策略、实测依据 |
+| [`docs/ARCHITECTURE.zh.md`](docs/ARCHITECTURE.zh.md) | 模块职责、数据流、API 策略、撤销策略、实测依据 |
 | [`docs/INSTALL.zh.md`](docs/INSTALL.zh.md) | 安装、验证、卸载 |
 | [`docs/USAGE.zh.md`](docs/USAGE.zh.md) | 界面与工作流说明 |
 | [`docs/LIMITATIONS.zh.md`](docs/LIMITATIONS.zh.md) | 已知限制与注意事项 |
