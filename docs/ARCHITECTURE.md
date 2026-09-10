@@ -33,16 +33,18 @@ root, so adding the project root to `sys.path` is enough to `import main`. Entry
 layer:
 
 ```
-bootstrap.py    sys.path injection + detection and release of conflicting top-level modules (core / ui / utils…)
+bootstrap.py    root-first sys.path handling + take-over of conflicting top-level modules (core / ui / utils…), incl. their cached submodules
 main.py         launch() / close() / reload_and_launch(), window lifetime and scriptJob cleanup
 __init__.py     optional facade: injects sys.path and then forwards to main (supports import BatchAttributeEditor)
 ```
 
 > The price of the flat layout is that top-level names such as `core` / `ui` / `utils` are very
-> common. `bootstrap` detects modules with the same name that another plug-in has already occupied
-> and reports them; `launch()` removes them from `sys.modules` by default, because otherwise
-> `import core.session` would silently pick up somebody else's `core` and the fault would be very
-> hard to diagnose.
+> common. `bootstrap` puts the project root first on `sys.path` and, by default, evicts every
+> foreign module under a conflicting top-level name — the top-level package **and its cached
+> submodules** (a stale `core.results` from another tool would otherwise shadow this project's
+> imports). Conflicts are reported when they happen. The take-over is symmetric with other
+> flat-layout tools (e.g. `materialConvert`): the last launched tool wins, while the already
+> running tool keeps working from its imported module objects.
 
 ```
 UI Layer (PySide6 / PySide2)

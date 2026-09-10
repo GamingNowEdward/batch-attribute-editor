@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional, Type
 
 from core.types import AttributeKind, ChannelSpec, EditorKind
 from ui.editors.base import ChannelWidget
-from ui.qt import QtWidgets
+from ui.qt import QtGui, QtWidgets
 
 #: Input range used when no range is declared (large enough to mean "no restriction")
 _UNBOUNDED = 1.0e12
@@ -195,8 +195,6 @@ class UnitChannelWidget(FloatChannelWidget):
 def _integer_validator(parent) -> "QtWidgets.QLineEdit":
     """Integer validator (optional import; without it validation is skipped but parsing
     stays explicit)."""
-    from ui.qt import QtGui
-
     validator_class = getattr(QtGui, "QIntValidator", None)
     if validator_class is None:
         return None

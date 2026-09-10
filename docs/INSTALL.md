@@ -192,8 +192,10 @@ modules live in the root.
 
 **Q: `import main` picks up something else / `import core` raises a strange error?**
 With a flat layout `core` / `ui` / `utils` / `tests` are very common names and may already be taken
-by another plug-in. `main.launch()` detects this automatically and evicts the module of the same
-name from `sys.modules` (printing a notice as it does so). If the problem persists, check whether
+by another plug-in using the same layout (e.g. `materialConvert`). `main.launch()` handles this
+automatically: it puts this project first on `sys.path` and evicts the foreign top-level modules
+**together with their cached submodules** (printing a notice when it does so), so both tools can
+coexist in one Maya session ("last launched tool wins"). If the problem persists, check whether
 some plug-in's module name collides with this project.
 
 **Q: The window opens empty / says “no nodes scanned yet”?**

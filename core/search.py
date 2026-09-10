@@ -27,6 +27,7 @@ from core.attributes import AttributeScanner
 from core.compatibility import (
     CompatibilityValidator,
     NodeValidation,
+    ValidationStatus,
     ValidationSummary,
 )
 from core.traversal import NodeRecord
@@ -269,8 +270,6 @@ class SearchEngine:
     def _apply_validation_filters(attributes: Sequence[AggregatedAttribute],
                                   filters: SearchFilters) -> List[AggregatedAttribute]:
         """Filter groups by Locked / Connected (needs full validation, only runs when checked)."""
-        from core.compatibility import ValidationStatus
-
         kept: List[AggregatedAttribute] = []
         for group in attributes:
             validations = group.validate()

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.types import ChannelSpec
 from ui.editors.base import ChannelKey, ValueEditor
-from ui.qt import QtWidgets
+from ui.qt import QtGui, QtWidgets
 from ui.styles import BORDER
 
 
@@ -148,8 +148,6 @@ class ColorValueEditor(ValueEditor):
 
     def _pick_color_qt(self) -> Optional[Tuple[float, float, float]]:
         """Qt colour dialog fallback."""
-        from ui.qt import QtGui
-
         red, green, blue = self.current_rgb()
         initial = QtGui.QColor.fromRgbF(
             min(max(red, 0.0), 1.0), min(max(green, 0.0), 1.0), min(max(blue, 0.0), 1.0)

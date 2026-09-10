@@ -30,14 +30,16 @@ Hierarchy Traversal → Attribute Discovery → Type Resolution
 把项目根加入 `sys.path` 后即可 `import main`。入口与引导层：
 
 ```
-bootstrap.py    sys.path 注入 + 顶层同名模块（core / ui / utils…）冲突检测与释放
+bootstrap.py    项目根置顶 + 顶层同名模块（core / ui / utils…）冲突接管与释放（含其缓存的子模块）
 main.py         launch() / close() / reload_and_launch()，窗口生命周期与 scriptJob 回收
 __init__.py     可选门面：注入 sys.path 后转发到 main（支持 import BatchAttributeEditor）
 ```
 
-> 扁平结构的代价是 `core` / `ui` / `utils` 这些顶层名字很常见。`bootstrap` 会检测
-> 已被其它插件占用的同名模块并报告，`launch()` 默认把它们从 `sys.modules` 中请出去，
-> 否则 `import core.session` 会静默拿到别人的 `core`，故障将难以诊断。
+> 扁平结构的代价是 `core` / `ui` / `utils` 这些顶层名字很常见。`bootstrap` 会把项目根
+> 置顶到 `sys.path`，并默认释放同名顶层模块下所有**来自其它路径的模块及其缓存的子模块**
+> （例如别的工具残留的 `core.results`，否则会遮蔽本项目的导入）；发生接管时打印提示。
+> 该接管与其它扁平结构工具（如 `materialConvert`）对称：**后启动者赢**，已运行的工具
+> 依靠已导入的模块对象继续工作。
 
 ```
 UI Layer (PySide6 / PySide2)

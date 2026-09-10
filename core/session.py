@@ -41,7 +41,7 @@ from core.traversal import (
     TraversalScope,
     TraversalSummary,
 )
-from core.type_resolver import build_channels
+from core.type_resolver import build_channels, resolve_channel_plug
 from core.types import ChannelSpec
 from utils import maya_utils
 from utils.logging_utils import plural
@@ -183,8 +183,6 @@ class BatchAttributeSession:
             if plug is None:
                 continue
             for channel in channels:
-                from core.type_resolver import resolve_channel_plug
-
                 channel_plug = resolve_channel_plug(plug, channel)
                 if channel_plug is None:
                     continue

@@ -136,10 +136,17 @@ BatchAttributeEditor/      ← add this directory to sys.path
 ```
 
 The price of the flat layout is that top-level names such as `core` / `ui` / `utils` / `tests` are
-very common. `main.launch()` detects whether another plug-in has taken them over and by default
-removes the same-named modules from `sys.modules` (printing a notice at the same time), because
-otherwise `import core.session` would pick up the wrong module. Use
-`main.launch(release_conflicts=False)` when that behaviour is not wanted.
+very common and may collide with other plug-ins using the same layout (for example the sibling
+`materialConvert` tool). At launch the tool therefore:
+
+* puts its own root **first** on `sys.path` so its packages win the lookup;
+* evicts foreign modules with the same top-level names — **including cached submodules** such as a
+  stale `core.results` left by the other tool, which would otherwise shadow this tool's imports;
+* prints a notice whenever such a take-over happens.
+
+The result is a "last launched tool wins" contract that works in both directions: the other tool's
+open window keeps running from its already-imported modules, and both tools can be used in the same
+Maya session. Use `main.launch(release_conflicts=False)` to skip the take-over.
 
 ---
 

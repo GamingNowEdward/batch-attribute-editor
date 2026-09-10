@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from core.types import AttributeDefinition, ChannelSpec
+from core.types import AttributeDefinition, AttributeKind, ChannelSpec
 from ui.qt import QtCore, QtWidgets, Signal
 
 ChannelKey = Tuple[Optional[int], Optional[int]]
@@ -110,8 +110,6 @@ class ChannelWidget(QtWidgets.QWidget):
 
     def unit_hint(self) -> str:
         """Unit hint (angle / distance / time and so on)."""
-        from core.types import AttributeKind
-
         return {
             AttributeKind.ANGLE: "Degrees",
             AttributeKind.DISTANCE: "Centimeters",

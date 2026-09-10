@@ -33,10 +33,17 @@ def project_root() -> str:
 
 
 def ensure_on_path() -> str:
-    """Add the project root to ``sys.path`` (idempotent) and return the project root."""
+    """Put the project root **first** on ``sys.path`` and return it.
+
+    The root is always moved to the front (not only inserted when missing):
+    another tool with the same flat layout may have prepended its own root
+    earlier, and Python resolves top-level names such as ``core`` / ``ui``
+    by ``sys.path`` order.
+    """
     root = project_root()
-    if root not in sys.path:
-        sys.path.insert(0, root)
+    while root in sys.path:
+        sys.path.remove(root)
+    sys.path.insert(0, root)
     return root
 
 
@@ -67,15 +74,29 @@ def conflicting_modules() -> List[Tuple[str, str]]:
 
 
 def release_conflicting_modules() -> List[Tuple[str, str]]:
-    """Remove foreign same-name modules from ``sys.modules`` and return the removed list.
+    """Remove foreign same-name modules (top-level ones and their cached
+    submodules) from ``sys.modules``; returns the detected top-level conflicts.
 
     A necessary cost of the flat structure: without this, ``import core.session``
     picks up another plug-in's ``core`` and the tool fails in ways that are hard
     to diagnose. Callers should print the return value for the user.
+
+    Submodules are evicted independently of the top-level key: a failure in the
+    other tool can leave a mixed state (its ``core.logger`` next to our
+    ``core.results``, with the top-level name already removed), and a stale
+    ``core.results`` from the other tool would shadow ours on the next import.
     """
     conflicts = conflicting_modules()
-    for name, _path in conflicts:
-        sys.modules.pop(name, None)
+    root = project_root()
+    for module_name in list(sys.modules):
+        top = module_name.split(".", 1)[0]
+        if top not in TOP_LEVEL_MODULES:
+            continue
+        module = sys.modules.get(module_name)
+        path = getattr(module, "__file__", None)
+        if path and os.path.abspath(path).startswith(root):
+            continue  # ours: keep it
+        sys.modules.pop(module_name, None)
     return conflicts
 
 

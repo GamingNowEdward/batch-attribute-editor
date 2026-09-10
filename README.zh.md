@@ -130,10 +130,16 @@ BatchAttributeEditor/      ← 把这个目录加入 sys.path
     docs/                  文档（安装 / 使用 / 架构 / 已知限制）
 ```
 
-扁平结构的代价是 `core` / `ui` / `utils` / `tests` 这些顶层名字很常见。
-`main.launch()` 会检测是否有其它插件占用了它们，并默认把同名模块从 `sys.modules`
-中请出去（同时打印提示），否则 `import core.session` 会拿到错误的模块。
-不需要这个行为时用 `main.launch(release_conflicts=False)`。
+扁平结构的代价是 `core` / `ui` / `utils` / `tests` 这些顶层名字很常见，
+可能与其他同样采用扁平结构的插件（例如同目录的 `materialConvert`）撞车。启动时工具会：
+
+* 把本项目根**置顶**到 `sys.path`，让本项目的包优先被找到；
+* 释放同名顶层模块下所有**来自其它路径的模块（含缓存的子模块）**——例如对方残留的
+  `core.results`，否则它会在后续导入时遮蔽本项目；
+* 发生接管时打印提示。
+
+由此形成双向可用的「后启动者赢」契约：另一个工具已打开的窗口依靠已导入的模块对象继续工作，
+两个工具可以在同一个 Maya 会话中共存。不需要该行为时用 `main.launch(release_conflicts=False)`。
 
 ---
 
