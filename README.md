@@ -42,14 +42,20 @@ Hierarchy Traversal + Attribute Discovery + Type Resolution
 
 ## Quick start
 
-Run this in Maya's **Script Editor** (Python tab):
+Double-click **`copy_launch.bat`** in the project root: it copies a launch command with this
+folder's absolute path already filled in. Paste it into Maya's **Script Editor** (Python tab)
+and press Enter:
 
 ```python
-import sys
-sys.path.insert(0, r"C:\opencode\BatchAttributeEditor")
-import main
-main.launch()
+import sys; sys.path.insert(0, r"C:\opencode\BatchAttributeEditor"); import main; main.reload_and_launch()
 ```
+
+The script does **not** start Maya — it only fills the clipboard, so you keep using the session you
+already have open. It calls `reload_and_launch()` rather than `launch()`: Python caches imported
+modules, so after you edit a file a plain `import main` would keep handing back the old code until
+Maya is restarted. The path is resolved when the script runs, so the project can live on a USB
+stick, a network share, any drive letter or a renamed folder. (The console window also prints the
+self-check and test commands for copying by hand.)
 
 Then:
 

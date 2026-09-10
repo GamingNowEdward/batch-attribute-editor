@@ -39,14 +39,17 @@ Hierarchy Traversal + Attribute Discovery + Type Resolution
 
 ## 快速开始
 
-在 Maya 的 **Script Editor**（Python 标签）里执行：
+双击项目根目录下的 **`copy_launch.bat`**：它会把一条已填好本项目绝对路径的启动命令放进剪贴板，
+粘贴到 Maya 的 **Script Editor**（Python 标签）里回车即可：
 
 ```python
-import sys
-sys.path.insert(0, r"C:\opencode\BatchAttributeEditor")
-import main
-main.launch()
+import sys; sys.path.insert(0, r"C:\opencode\BatchAttributeEditor"); import main; main.reload_and_launch()
 ```
+
+该脚本**不会**启动 Maya，只是填好剪贴板，你继续用已经开着的 Maya。它用 `reload_and_launch()`
+而不是 `launch()`：Python 会缓存已导入的模块，改完文件后直接 `import main` 拿到的仍是旧代码，
+除非重启 Maya；这个命令会先丢弃缓存再重新导入。路径在运行时解析，所以项目放在 U 盘、网络盘、
+任意盘符或改名后的文件夹里都能直接用。（命令行窗口里还会打印自检、自动化测试两条命令供手动复制。）
 
 然后：
 
