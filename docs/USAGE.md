@@ -61,10 +61,14 @@ Enter key needed.
 
 | Match mode | Behaviour | Example |
 | --- | --- | --- |
-| Contains (default) | the name contains the substring | `vis` → `visibility` |
+| Contains (default) | the name contains the substring | `color` → `color`, `overrideColorRGB`, `objectColorRGB` |
 | Exact | exactly equal | `visibility` matches, `vis` does not |
-| Prefix | starts with the string | `trans` → `translate`, `translateX` |
+| Prefix | starts with the string | `color` → `color`, `colorR` / `colorG` / `colorB` (not `overrideColorRGB`) |
 | Fuzzy | subsequence match | `vsblt` → `visibility` |
+
+For the same search text the three name modes are nested: Exact ⊆ Prefix ⊆ Contains — Prefix
+anchors the match at the start of the name, while Contains also accepts it in the middle or at the
+end. Fuzzy is a separate subsequence rule.
 
 Search results are **aggregated around the attribute** and sorted by the number of nodes involved,
 from most to fewest:

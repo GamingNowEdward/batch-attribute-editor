@@ -60,10 +60,13 @@
 
 | 匹配模式 | 行为 | 例子 |
 | --- | --- | --- |
-| 包含（Contains，默认） | 名字里含该子串 | `vis` → `visibility` |
+| 包含（Contains，默认） | 名字里含该子串 | `color` → `color`、`overrideColorRGB`、`objectColorRGB` |
 | 完整匹配（Exact） | 完全相等 | `visibility` 命中，`vis` 不命中 |
-| 前缀（Prefix） | 以该串开头 | `trans` → `translate`、`translateX` |
+| 前缀（Prefix） | 以该串开头 | `color` → 仅 `color`、`colorR/G/B`（不含 `overrideColorRGB`） |
 | 模糊（Fuzzy） | 子序列匹配 | `vsblt` → `visibility` |
+
+同一个搜索词下，三种名称匹配的范围是包含关系：完整匹配 ⊆ 前缀 ⊆ 包含 —— 前缀把匹配锚定在
+名字开头，包含还接受出现在中间或结尾；模糊是独立的子序列规则。
 
 搜索结果以**属性为中心聚合**，按涉及节点数从多到少排序：
 

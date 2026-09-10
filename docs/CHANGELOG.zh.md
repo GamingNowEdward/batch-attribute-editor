@@ -21,6 +21,9 @@
   （定义层与逐节点校验、默认值、锁定 / 已连接（Locked / Connected）的「所有节点」规则）。
 - 中文文档术语统一：项目自身的 UI / 功能名改用中文，首次出现附英文对照（README.zh、USAGE.zh、
   INSTALL.zh、ARCHITECTURE.zh、LIMITATIONS.zh；ASCII 界面示意图、程序输出与 changelog 历史条目保持原样）。
+- `USAGE.md` / `USAGE.zh.md`：匹配模式表改用能区分「包含」与「前缀」的示例，并说明三者的包含关系
+  （完整匹配 ⊆ 前缀 ⊆ 包含）。
+- UI：匹配模式下拉框的每一项增加 tooltip 说明。
 
 ### 新增
 

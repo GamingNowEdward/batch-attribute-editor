@@ -25,6 +25,9 @@ has been `1.0.0` since the initial commit).
 - Chinese docs terminology: project-owned UI / feature names are now written in Chinese with the
   English label on first mention (README.zh, USAGE.zh, INSTALL.zh, ARCHITECTURE.zh,
   LIMITATIONS.zh); ASCII UI mock, program output and historical changelog entries are unchanged.
+- `USAGE.md` / `USAGE.zh.md`: the match-mode table now uses examples that distinguish Contains from
+  Prefix and states their nesting (Exact ⊆ Prefix ⊆ Contains).
+- UI: the match-mode drop-down items carry tooltips explaining each mode.
 
 ### Added
 

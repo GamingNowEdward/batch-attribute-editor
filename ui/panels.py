@@ -79,6 +79,14 @@ class ScopePanel(QtWidgets.QGroupBox):
         self.status_label.setText(text)
 
 
+_MATCH_MODE_TOOLTIPS = {
+    MatchMode.CONTAINS: "Matches anywhere in the attribute name (long or short), case-insensitive",
+    MatchMode.EXACT: "Matches only when the whole name equals the search text",
+    MatchMode.PREFIX: "Matches from the start of the name; a stricter subset of Contains",
+    MatchMode.FUZZY: "Subsequence match: the typed characters appear in order (vsblt → visibility)",
+}
+
+
 class SearchPanel(QtWidgets.QGroupBox):
     """Attribute search and filters."""
 
@@ -99,8 +107,9 @@ class SearchPanel(QtWidgets.QGroupBox):
         top.addWidget(self.pattern_edit, 1)
 
         self.mode_combo = QtWidgets.QComboBox()
-        for mode, label in MATCH_MODE_LABELS:
+        for index, (mode, label) in enumerate(MATCH_MODE_LABELS):
             self.mode_combo.addItem(label, mode)
+            self.mode_combo.setItemData(index, _MATCH_MODE_TOOLTIPS[mode], Qt.ToolTipRole)
         self.mode_combo.currentIndexChanged.connect(self._emit)
         top.addWidget(self.mode_combo)
         layout.addLayout(top)
