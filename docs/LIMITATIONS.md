@@ -12,9 +12,10 @@ made**, together with the measurements behind them. Every entry tries to give bo
 
 | Part | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 142 automated tests pass under mayapy on Maya 2024.2 |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 158 automated tests pass under mayapy on Maya 2024.2 (13 GUI tests skipped) |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (150-node batch, partial-failure scenario) |
 | UI module imports and factory dispatch | ✅ verified automatically |
+| Localization (language switch / fallback / persistence / Core texts) | ✅ automated under mayapy; the widget-level retranslation was additionally smoke-verified with PySide6 6.11 (offscreen, fake `maya`) |
 | **UI window construction and display** | ✅ confirmed in a real Maya 2024.2 GUI (PySide2 5.15.2) |
 | **UI interaction details** | ⚠️ **not automatically verified** (button clicks, colour picker and docking drags need hands-on testing) |
 
@@ -38,9 +39,11 @@ missing-node count.)
 
 **Why widget-level tests cannot be automated**: under `mayapy` / `standalone` a `QApplication`
 cannot be created — in testing, as soon as one was attempted the process exited immediately with
-`QWidget: Cannot create a QApplication`. Therefore the 12 tests in `test_ui_smoke.py` that need a
-QWidget are skipped automatically in batch mode, and the window and its interactions can only be
-confirmed in a real GUI session.
+`QWidget: Cannot create a QApplication`. Therefore the 13 widget tests in `test_ui_smoke.py` /
+`test_i18n.py` that need a QWidget are skipped automatically in batch mode, and the window and its
+interactions can only be confirmed in a real GUI session. (The language-switch retranslation pass
+was additionally exercised outside Maya with a real Qt application — system Python + PySide6 +
+offscreen platform, `maya` package faked — as a cross-binding smoke check.)
 
 **Interactions not yet confirmed item by item**: the colour picker button, ticking only some
 channels, ticking the filters, and layout persistence after docking to a panel. If a problem shows
@@ -207,3 +210,25 @@ the current version**:
 * creating and deleting array elements
 * background-thread scanning (search is currently synchronous; a very large scene briefly blocks the
   interface, which shows a wait cursor in the meantime)
+
+---
+
+## 11. Localization (UI language)
+
+* Only **English and Simplified Chinese** are shipped. Adding a language means adding a catalog whose
+  key set matches the English reference exactly (registered in `i18n/manager.py`) plus one selector
+  entry; no UI code needs to change.
+* **Audit-log entries keep the language they were written in** — they are a record of past
+  operations. Entries created after a switch use the new language; the currently displayed
+  Preview / Apply report, the status lines and the details refresh immediately.
+* **Input-validation errors that already contain data** (for example `channel: <coercion error>`)
+  are shown as they were rendered; changing the input again renders them in the new language.
+* **Type labels stay English by design**: `Float`, `Double3`, `Compound`, `Matrix`, … are treated
+  like Maya type names and are never translated; the same applies to the `type=/api=/numeric=`
+  metadata lines in Technical Details.
+* The language preference is **global per user**, not per scene or per Maya version (stored through
+  `QSettings`), and is restored on the next `launch()`.
+* Switching languages refreshes the open window in place — no widget is recreated, so the current
+  table selection, editor input and log history survive. If a third party calls
+  `i18n.set_language()` directly, the open window is not notified automatically; use the in-window
+  selector instead.

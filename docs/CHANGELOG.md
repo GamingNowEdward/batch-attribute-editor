@@ -2,6 +2,57 @@
 
 # Changelog
 
+## 2026-09-14
+
+### Fixed
+
+- `ui/panels.py`: the `SearchPanel` filter checkboxes now connect their `toggled` signals only after
+  all of them exist — previously `setChecked(True)` during construction emitted `toggled` before the
+  remaining checkboxes were created (an `AttributeError` that PySide printed but swallowed)
+- `ui/panels.py`: the raw `| 0x1` text-interaction mask was replaced with
+  `Qt.TextSelectableByMouse`, so the window also constructs under the strict PySide6 / Qt 6 enums
+
+### Added
+
+- **Bilingual UI (English / 中文)** with a `Language:` selector in the top-right corner of the
+  window: English is the default; switching is immediate (no Maya restart) and refreshes every
+  panel in place without recreating widgets; the choice is persisted with `QSettings` and restored
+  at the next launch (first launch defaults to English)
+- New top-level `i18n/` package (pure Python, no Qt / Maya dependency, used by both Core and UI):
+  `manager.py` (catalog lookup, English fallback, `{param}` formatting, `plural()`), `en.py` (the
+  English reference catalog, byte-identical to the previous literals) and `zh_cn.py` (Simplified
+  Chinese; its key set is enforced to match the English one by a test)
+- `ui/settings.py`: `LanguageSettings` — a small QSettings wrapper with an injectable backend
+- `tests/test_i18n.py`: 29 tests — manager switching / fallback / formatting / plural, catalog key
+  and placeholder parity, a source scan for literal `tr("...")` keys, persistence through fake and
+  real QSettings backends, Core report texts, and a GUI language-switch test
+
+### Changed
+
+- All user-visible strings now go through `i18n.tr()` / `i18n.plural()`: window title, section
+  titles, buttons, tooltips, placeholders, filters, status lines, Attribute Details, Results table
+  headers, Technical Details placeholders, Preview / Apply reports, batch-write and coercion error
+  messages, and the audit header. The English catalog reproduces the previous literals exactly, so
+  the existing English assertions and behaviour are unchanged
+- Language switching replays the window's dynamic state (selection status, search summary / empty
+  state, selected-attribute details and validation, the currently displayed Preview / Apply report,
+  the value hint) and calls `retranslate()` on existing editors; audit-log entries keep the language
+  they were written in
+- Maya data is deliberately **not** translated: node / attribute / plug names, enum field values,
+  type labels (`Float`, `Double3`, …), `definition.describe()` metadata and exception text stay
+  as-is
+- `bootstrap.TOP_LEVEL_MODULES` now includes `i18n`, so the same-name module take-over and
+  `reload_and_launch()` cover the new package
+
+### Documentation
+
+- README / ARCHITECTURE / USAGE / INSTALL / LIMITATIONS (en + zh) document the localization
+  architecture, the language selector, persistence and how to reset it, what is translated versus
+  Maya data, and the localization limitations (audit-log language, raw validation errors, English
+  type labels)
+- Test count refreshed to **171** (13 GUI tests are skipped in batch mode) in README, INSTALL and
+  LIMITATIONS (en + zh)
+
 ## 2026-09-11
 
 ### Fixed

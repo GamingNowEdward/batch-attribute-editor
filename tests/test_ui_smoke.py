@@ -60,7 +60,12 @@ class UIImportTest(unittest.TestCase):
     """
 
     MODULES = (
+        "i18n",
+        "i18n.manager",
+        "i18n.en",
+        "i18n.zh_cn",
         "ui.qt",
+        "ui.settings",
         "ui.styles",
         "ui.attribute_model",
         "ui.panels",

@@ -99,6 +99,16 @@ import sys; sys.path.insert(0, r"C:\opencode\BatchAttributeEditor"); import main
 
 ---
 
+## 界面语言（English / 中文）
+
+界面内置 **English（默认）** 与 **简体中文**。窗口右上角的选择器可**立即切换语言、无需重启
+Maya**，选择会被记住并在下次启动时恢复。工具自身的全部文本都会翻译（标题、按钮、tooltip、
+过滤器、状态栏、报告、日志消息）；**Maya 数据绝不翻译**（节点 / 属性 / plug 名、枚举原始值、
+`Float` / `Double3` 等类型标签、异常文本）。详见
+[`docs/USAGE.zh.md`](docs/USAGE.zh.md)。
+
+---
+
 ## 项目结构
 
 ```
@@ -124,16 +134,21 @@ BatchAttributeEditor/      ← 把这个目录加入 sys.path
         panels.py          范围 / 搜索 / 详情 / 预览 / 日志 区块
         attribute_model.py 结果表模型
         editors/           按类型动态生成的编辑器（ValueEditorFactory）
+        settings.py        语言持久化（QSettings 封装）
         main_window.py     窗口编排
+    i18n/                  纯 Python 本地化，Core 与 UI 均可引用
+        manager.py         翻译管理器：词条查找、English 回退、{参数} 格式化、plural()
+        en.py              English reference 词条
+        zh_cn.py           简体中文词条
     utils/
         maya_utils.py      节点/plug 名称派生、UUID 复查
         logging_utils.py   双通道日志（用户可读 / 技术细节）
-    tests/                 142 个测试（mayapy 下运行）
+    tests/                 171 个测试（mayapy 下运行）
     tools/selfcheck.py     在真实 Maya 里运行的自检脚本
     docs/                  文档（安装 / 使用 / 架构 / 已知限制）
 ```
 
-扁平结构的代价是 `core` / `ui` / `utils` / `tests` 这些顶层名字很常见，
+扁平结构的代价是 `core` / `ui` / `utils` / `i18n` / `tests` 这些顶层名字很常见，
 可能与其他同样采用扁平结构的插件（例如同目录的 `materialConvert`）撞车。启动时工具会：
 
 * 把本项目根**置顶**到 `sys.path`，让本项目的包优先被找到；
@@ -160,7 +175,7 @@ Core 层与部分 UI 层可在 Maya 自带的 `mayapy` 下完整自动化测试�
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-当前结果：**142 个测试全部通过**（其中 12 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
+当前结果：**171 个测试全部通过**（其中 13 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
@@ -171,6 +186,7 @@ Core 层与部分 UI 层可在 Maya 自带的 `mayapy` 下完整自动化测试�
 | `test_batch_setter.py` | 各类型批量写入、颜色不 clamp、multi 不新建元素、缺失/锁定/连接跳过、单点失败不中断整批、同名不同类型只改兼容节点 |
 | `test_undo.py` | 一次应用 = 一次撤销、重做、部分失败仍一次撤销、150 节点仍一次撤销、对照组证明 chunk 必要 |
 | `test_session.py` | 端到端工作流、预览统计自洽、缓存与刷新、1500+ 节点性能 |
+| `test_i18n.py` | 语言管理器切换 / 回退 / 格式化 / 复数、key 与占位符一致性、字面量 `tr("...")` key 扫描、QSettings 持久化（假后端 + 真实后端）、Core 报告文本、GUI 语言切换测试 |
 | `test_ui_smoke.py` | UI 模块导入、工厂注册表完整性、结果表模型；widget 测试在 GUI 会话中运行 |
 
 在真实 Maya GUI 里做一次端到端自检（会建临时节点并用完即删）：
@@ -188,9 +204,10 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | 部分 | 状态 |
 | --- | --- |
-| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销） | ✅ 142 个测试在 Maya 2024.2 mayapy 下通过 |
+| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销） | ✅ 171 个测试在 Maya 2024.2 mayapy 下通过（13 个 GUI 测试在 batch 模式下跳过） |
 | 撤销粒度（一次应用 = 一次撤销） | ✅ 实测验证（含 150 节点批量与部分失败场景） |
 | UI 模块导入与工厂分发 | ✅ 自动化验证 |
+| 本地化（语言切换 / 回退 / 持久化 / Core 文本） | ✅ mayapy 下自动化覆盖；控件级重译另用 PySide6 6.11（offscreen + fake `maya`）冒烟验证 |
 | **UI 窗口构建与显示** | ✅ 已在真实 Maya 2024.2 GUI 中确认（`tools/selfcheck.py`，PySide2 5.15.2） |
 | **UI 交互细节**（按钮点击、颜色选择器、停靠拖拽） | ⚠️ 未自动化覆盖，需人工体验确认 |
 

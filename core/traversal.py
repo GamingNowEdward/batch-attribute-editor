@@ -26,6 +26,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from maya.api import OpenMaya as om2
 
+from i18n import tr
 from utils import maya_utils
 from utils.logging_utils import plural
 
@@ -264,7 +265,8 @@ class TraversalSummary:
         parts = [plural(self.total, "node"), plural(self.transforms, "transform"),
                  plural(self.shapes, "shape")]
         if self.intermediates:
-            parts.append(f"({plural(self.intermediates, 'intermediate')})")
+            parts.append(tr("traversal.intermediates",
+                            value=plural(self.intermediates, "intermediate")))
         if self.dependency_nodes:
             parts.append(plural(self.dependency_nodes, "DG node"))
         return ", ".join(parts)

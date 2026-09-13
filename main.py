@@ -49,6 +49,13 @@ def launch(dock: bool = False, restore: bool = False,
 
     _close_previous()
 
+    from i18n import set_language
+    from ui.settings import LanguageSettings
+
+    # Restore the persisted UI language before the window builds its texts.
+    # No stored value (first launch) keeps the default English.
+    set_language(LanguageSettings().load())
+
     from ui.main_window import (
         WORKSPACE_CONTROL_NAME,
         BatchAttributeEditorWindow,

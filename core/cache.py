@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from core.types import AttributeDefinition
+from i18n import tr
 from utils.logging_utils import plural
 
 NamePair = Tuple[str, str]
@@ -36,9 +37,10 @@ class CacheStats:
 
     def describe(self) -> str:
         """One-line cache summary for the UI status hint."""
-        return (f"Cache: attribute tables for {plural(self.nodes, 'node')}, "
-                f"{plural(self.definitions, 'type definition')} "
-                f"(generation {self.generation})")
+        return tr("cache.describe",
+                  nodes=plural(self.nodes, "node"),
+                  definitions=plural(self.definitions, "type definition"),
+                  generation=self.generation)
 
 
 class ScanCache:

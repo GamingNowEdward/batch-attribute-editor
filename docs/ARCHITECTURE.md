@@ -28,18 +28,18 @@ Hierarchy Traversal → Attribute Discovery → Type Resolution
 
 ## 2. Layering and data flow
 
-The project uses a **flat layout**: `core` / `ui` / `utils` / `tests` sit directly in the project
-root, so adding the project root to `sys.path` is enough to `import main`. Entry point and bootstrap
-layer:
+The project uses a **flat layout**: `core` / `ui` / `utils` / `i18n` / `tests` sit directly in the
+project root, so adding the project root to `sys.path` is enough to `import main`. Entry point and
+bootstrap layer:
 
 ```
-bootstrap.py    root-first sys.path handling + take-over of conflicting top-level modules (core / ui / utils…), incl. their cached submodules
+bootstrap.py    root-first sys.path handling + take-over of conflicting top-level modules (core / ui / utils / i18n…), incl. their cached submodules
 main.py         launch() / close() / reload_and_launch(), window lifetime and scriptJob cleanup
 __init__.py     optional facade: injects sys.path and then forwards to main (supports import BatchAttributeEditor)
 ```
 
-> The price of the flat layout is that top-level names such as `core` / `ui` / `utils` are very
-> common. `bootstrap` puts the project root first on `sys.path` and, by default, evicts every
+> The price of the flat layout is that top-level names such as `core` / `ui` / `utils` / `i18n` are
+> very common. `bootstrap` puts the project root first on `sys.path` and, by default, evicts every
 > foreign module under a conflicting top-level name — the top-level package **and its cached
 > submodules** (a stale `core.results` from another tool would otherwise shadow this project's
 > imports). Conflicts are reported when they happen. The take-over is symmetric with other
@@ -52,6 +52,7 @@ UI Layer (PySide6 / PySide2)
   panels.py                 Scope / Attribute Search / Results / Attribute Details / Value / Preview / Report sections
   attribute_model.py        search results → Qt table model
   editors/*                 editors generated on the fly from the attribute type (ValueEditorFactory)
+  settings.py               language persistence (QSettings wrapper)
         │  (calls only Core's public API, no cmds.setAttr anywhere)
         ▼
 Core Layer
@@ -72,6 +73,13 @@ Core Layer
 Utils
   maya_utils.py     low-level helpers: node/plug name derivation, UUID re-checks, DAG tests
   logging_utils.py  two-channel logging (UI-friendly messages / technical details)
+        │
+        ▼
+i18n (pure Python, no Qt / Maya dependency; imported by both Core and UI)
+  manager.py        TranslationManager: catalog lookup, English fallback, {param} formatting, plural()
+  en.py             English reference catalog (the exact historical English strings)
+  zh_cn.py          Simplified Chinese catalog (key set identical to en.py, enforced by a test)
+  __init__.py       public API: tr() / plural() / set_language() / get_language()
 ```
 
 **One complete data flow:**
@@ -354,6 +362,12 @@ Known environment anomalies (**they do not affect this tool, but they do affect 
   (`transform.overrideColorRGB`, `lambert.color`) instead of creating them dynamically.
   The tool's recognition of, and writing to, both of them has been verified by measurement.
 
+The localization layer keeps the same policy: the language switch is covered by automated tests
+under mayapy, and the widget-level retranslation was additionally smoke-verified outside Maya with
+**system Python 3.14 + PySide6 6.11 (offscreen platform, fake `maya` package)**: window construction,
+English → 中文 → English switching (window title, buttons, table headers, details labels, editor unit
+hints, colour-editor buttons). Under Maya 2024 the same code path runs on PySide2 5.15.2.
+
 ---
 
 ## 10. Relationship between UI and Core
@@ -377,3 +391,53 @@ batch create/delete/copy/compare attributes, Namespace and NodeType filters, att
 Core's `SearchEngine` and `BatchSetter` both take "a set of nodes + an attribute definition" as input
 and do not assume that the nodes came from a DAG traversal, so none of the extensions above requires
 a change to the write layer.
+
+---
+
+## 12. Localization (UI language: English / 中文)
+
+Design goals: **English is the default and the reference language**; the user can switch at any time
+from the window; the text refreshes immediately without restarting Maya; the choice is persisted;
+business logic and Maya data are untouched.
+
+* **Layer boundary**: `i18n/` is a standalone pure-Python package, so `core` can use it without Qt
+  or Maya, and `i18n` imports nothing from the project (no cycles). The UI reaches `QSettings` only
+  through the `ui/qt.py` compatibility layer.
+* **Key-based catalogs**: stable keys such as `window.title`, `status.locked`,
+  `preview.describe.main`. The English and Chinese catalogs must contain exactly the same key set
+  (enforced by a test). The English texts are **byte-identical to the historical literals**, so
+  switching back to English reproduces the previous output exactly (the pre-existing English
+  assertions in the test suite act as a regression net).
+* **Fallback**: active language → English → the key itself. A malformed template or a missing
+  `{param}` returns the raw text instead of raising — a missing translation can never crash the tool.
+* **Placeholders**: dynamic values are `{named}` placeholders
+  (`tr("results.empty_no_match", count=7)`), never f-strings scattered across widgets.
+  `plural(count, "node")` renders `2 nodes` / `2 个节点` through the `counts.<noun>.<one|other>`
+  entries and keeps the historical English pluralisation as the last resort for unknown nouns.
+* **What is translated / not translated**: tool UI text (titles, buttons, tooltips, placeholders,
+  statuses, reports, log messages at creation time) is translated. Maya data is never translated:
+  node / attribute / plug names, enum field values, type labels (`Float`, `Double3`, …),
+  `definition.describe()` metadata lines, exception text and tracebacks stay as they are.
+* **Immediate refresh**: every panel exposes `retranslate()`; `BatchAttributeEditorWindow._retranslate()`
+  updates the static texts, replays the dynamic state it owns (selection status, search summary and
+  empty state, selected-attribute details, the currently shown Preview/Apply report, the validation
+  error, the value hint) and calls `retranslate()` on the **existing** editors. Widgets are not
+  recreated and user input is not lost.
+* **Audit log**: log entries and batch headers keep the language they were written in — they are a
+  record of past operations; entries created after a switch use the new language. The empty state
+  and the panel frame follow the active language.
+* **Persistence**: `ui/settings.py` uses
+  `QSettings("BatchAttributeEditor", "BatchAttributeEditor")`, key `language`, native format
+  (the Windows registry on this platform) - no extra configuration file and no hard-coded path.
+  First launch (nothing stored), a blank value or a failing store all fall back to English.
+  `main.launch()` restores the persisted language **before** the window builds its texts.
+* **Switch UI**: a `Language:` selector in the top-right corner of the window (`English` / `中文`).
+  Switching calls `set_language()`, saves the choice and runs the retranslation pass; unknown or
+  foreign spellings (`zh`, `zh-cn`, `en_US`, …) are normalised, and unknown languages fall back to
+  English.
+* **Bootstrap**: `bootstrap.TOP_LEVEL_MODULES` includes `i18n`, so `reload_and_launch()` and the
+  same-name module take-over treat it like the other top-level packages.
+
+Coverage: `tests/test_i18n.py` (manager switching / fallback / formatting / plural, catalog key and
+placeholder parity, source scan for literal `tr("...")` keys, QSettings persistence with fake and
+real backends, Core report texts, GUI language switching) plus the existing English assertions.

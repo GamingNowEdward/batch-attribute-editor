@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Type
 
 from core.types import AttributeKind, ChannelSpec, EditorKind
+from i18n import tr
 from ui.editors.base import ChannelWidget
 from ui.qt import QtGui, QtWidgets
 
@@ -93,11 +94,11 @@ class IntChannelWidget(ChannelWidget):
     def validation_error(self) -> str:
         text = self._edit.text().strip()
         if not text:
-            return "cannot be empty"
+            return tr("editor.integer.empty")
         try:
             int(text, 10)
         except ValueError:
-            return "an integer is required"
+            return tr("editor.integer.required")
         return ""
 
 

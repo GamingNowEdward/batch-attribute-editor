@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.types import ChannelSpec
+from i18n import tr
 from ui.editors.base import ChannelKey, ValueEditor
 from ui.qt import QtGui, QtWidgets
 from ui.styles import BORDER
@@ -36,7 +37,7 @@ class VectorValueEditor(ValueEditor):
     def __init__(self, definition, channels, samples=None, parent=None) -> None:
         super().__init__(definition, channels, samples, parent)
         if not channels:
-            hint = QtWidgets.QLabel("This attribute has no editable channels")
+            hint = QtWidgets.QLabel(tr("value.no_channels_editor"))
             hint.setObjectName("hintLabel")
             self._body.addWidget(hint)
 
@@ -61,21 +62,29 @@ class ColorValueEditor(ValueEditor):
 
         self._swatch = QtWidgets.QLabel(self)
         self._swatch.setFixedSize(42, 18)
-        self._swatch.setToolTip("Current color preview")
+        self._swatch.setToolTip(tr("editor.color.preview_tooltip"))
         row.addWidget(self._swatch)
 
-        picker = QtWidgets.QPushButton("Color Picker…", self)
-        picker.clicked.connect(self._pick_color)
-        row.addWidget(picker)
+        self._picker_button = QtWidgets.QPushButton(tr("button.color_picker"), self)
+        self._picker_button.clicked.connect(self._pick_color)
+        row.addWidget(self._picker_button)
 
-        set_current = QtWidgets.QPushButton("Load Current Value", self)
-        set_current.setToolTip("Read the current color of the first available node into the editor")
-        set_current.clicked.connect(self._reload_from_scene)
-        row.addWidget(set_current)
+        self._load_button = QtWidgets.QPushButton(tr("button.load_current"), self)
+        self._load_button.setToolTip(tr("editor.color.load_tooltip"))
+        self._load_button.clicked.connect(self._reload_from_scene)
+        row.addWidget(self._load_button)
 
         row.addStretch(1)
         self._body.addLayout(row)
         self._reload_from_scene_callback = None
+
+    def retranslate(self) -> None:
+        """Refresh the localized color-editor texts after a language switch."""
+        super().retranslate()
+        self._picker_button.setText(tr("button.color_picker"))
+        self._load_button.setText(tr("button.load_current"))
+        self._load_button.setToolTip(tr("editor.color.load_tooltip"))
+        self._update_swatch()
 
     # ------------------------------------------------------------ colour read/write
 
@@ -152,7 +161,7 @@ class ColorValueEditor(ValueEditor):
         initial = QtGui.QColor.fromRgbF(
             min(max(red, 0.0), 1.0), min(max(green, 0.0), 1.0), min(max(blue, 0.0), 1.0)
         )
-        color = QtWidgets.QColorDialog.getColor(initial, self, "Choose a color")
+        color = QtWidgets.QColorDialog.getColor(initial, self, tr("dialog.choose_color"))
         if not color.isValid():
             return None
         return (color.redF(), color.greenF(), color.blueF())

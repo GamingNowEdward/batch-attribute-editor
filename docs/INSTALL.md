@@ -141,7 +141,9 @@ Once the window appears:
 3. The tool follows the Maya selection automatically; the status bar should show the number of nodes
    scanned, for example `17 nodes (1 root) · 17 nodes, Transform 11, Shape 6`;
 4. Type `visibility` into the search box; `visibility | Boolean | <node count>` should appear in
-   Results.
+   Results;
+5. (Optional) Switch the `Language:` selector in the top-right corner to 中文 — the whole window
+   should update immediately, and switching back to English should restore it.
 
 ### 3.2 Full self-check (creates temporary nodes and deletes them afterwards)
 
@@ -165,7 +167,7 @@ Run this from the project root:
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py
 ```
 
-The expected output is `Ran 142 tests ... OK` (of which the 12 widget tests that need a GUI are
+The expected output is `Ran 171 tests ... OK` (of which the 13 widget tests that need a GUI are
 skipped in batch mode).
 
 These tests do **not** affect the Maya session you are working in: `mayapy` is a separate process
@@ -179,7 +181,11 @@ using its own temporary scene.
 * Option D / E: delete the `scripts\BatchAttributeEditor` folder and remove the snippet you added to
   `userSetup.py`;
 * The tool writes **no** data into the scene (it creates no nodes, writes no attributes and adds no
-  scriptNode), so nothing is left behind in scene files you have already opened.
+  scriptNode), so nothing is left behind in scene files you have already opened;
+* The only persistent trace outside the scene is the UI-language preference. It is stored with
+  `QSettings` under `HKEY_CURRENT_USER\Software\BatchAttributeEditor\BatchAttributeEditor`
+  (value `language`); delete that registry key if you want a clean removal. Missing or invalid
+  values simply fall back to English, so keeping it is harmless.
 
 ---
 
@@ -212,3 +218,10 @@ you have seen “N will be modified / M skipped”.
 **Q: Can I dock it into the right-hand panel?**
 The window opens floating by default; just drag it into one of Maya's docking areas. You can also
 dock it to the right directly from code with `main.launch(dock=True)`.
+
+**Q: How do I switch the interface to Chinese (or back to English)?**
+Use the `Language:` selector in the top-right corner of the window; the switch is immediate and does
+not need a Maya restart. The choice is remembered for the next launch (first launch defaults to
+English). If you want to reset it by hand, delete the
+`HKEY_CURRENT_USER\Software\BatchAttributeEditor\BatchAttributeEditor` key — the tool then falls
+back to English.

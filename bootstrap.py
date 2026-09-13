@@ -24,7 +24,9 @@ import sys
 from typing import List, Tuple
 
 #: Top-level module names claimed by this project
-TOP_LEVEL_MODULES: Tuple[str, ...] = ("core", "ui", "utils", "tests", "main", "bootstrap")
+TOP_LEVEL_MODULES: Tuple[str, ...] = (
+    "core", "ui", "utils", "i18n", "tests", "main", "bootstrap"
+)
 
 
 def project_root() -> str:

@@ -39,6 +39,7 @@ from core.search import AggregatedAttribute
 from core.traversal import NodeRecord
 from core.types import AttributeKind, ChannelSpec
 from core.undo import DEFAULT_CHUNK_NAME, UndoManager
+from i18n import tr
 from utils.logging_utils import OperationLog, describe_exception
 
 ChannelKey = Tuple[Optional[int], Optional[int]]
@@ -71,7 +72,9 @@ def coerce_value(value: Any, kind: AttributeKind) -> Any:
                 return True
             if text in ("false", "0", "no", "off", "\u5426"):
                 return False
-            raise ValueCoercionError(f"Cannot interpret {value!r} as a boolean")
+            raise ValueCoercionError(
+                tr("error.boolean_parse", value=repr(value))
+            )
         return bool(value)
 
     if kind in (AttributeKind.INT, AttributeKind.ENUM):
@@ -81,20 +84,26 @@ def coerce_value(value: Any, kind: AttributeKind) -> Any:
             return value
         if isinstance(value, float):
             if not float(value).is_integer():
-                raise ValueCoercionError(f"Integer required, got {value!r}")
+                raise ValueCoercionError(
+                    tr("error.integer_required", value=repr(value))
+                )
             return int(value)
         if isinstance(value, str):
             text = value.strip()
             try:
                 return int(text, 10)
             except ValueError as exc:
-                raise ValueCoercionError(f"Integer required, got {value!r}") from exc
-        raise ValueCoercionError(f"Integer required, got {type(value).__name__}")
+                raise ValueCoercionError(
+                    tr("error.integer_required", value=repr(value))
+                ) from exc
+        raise ValueCoercionError(
+            tr("error.integer_required", value=type(value).__name__)
+        )
 
     if kind in (AttributeKind.FLOAT, AttributeKind.DOUBLE, AttributeKind.ANGLE,
                 AttributeKind.DISTANCE, AttributeKind.TIME):
         if isinstance(value, bool):
-            raise ValueCoercionError("A boolean cannot be used as a numeric value")
+            raise ValueCoercionError(tr("error.boolean_as_number"))
         if isinstance(value, (int, float)):
             return float(value)
         if isinstance(value, str):
@@ -102,10 +111,16 @@ def coerce_value(value: Any, kind: AttributeKind) -> Any:
             try:
                 return float(text)
             except ValueError as exc:
-                raise ValueCoercionError(f"Numeric value required, got {value!r}") from exc
-        raise ValueCoercionError(f"Numeric value required, got {type(value).__name__}")
+                raise ValueCoercionError(
+                    tr("error.numeric_required", value=repr(value))
+                ) from exc
+        raise ValueCoercionError(
+            tr("error.numeric_required", value=type(value).__name__)
+        )
 
-    raise ValueCoercionError(f"Unsupported attribute type: {kind.display_name}")
+    raise ValueCoercionError(
+        tr("error.unsupported_type", type=kind.display_name)
+    )
 
 
 @dataclass
@@ -249,7 +264,7 @@ class BatchSetter:
             for record in group.records:
                 if not record.is_alive():
                     report.skipped_count += 1
-                    log.warning("Node no longer exists, skipped", node=record.name,
+                    log.warning(tr("log.node_missing_skipped"), node=record.name,
                                 attribute=group.name)
                     continue
 
@@ -258,7 +273,7 @@ class BatchSetter:
                 )
                 if not validation.has_writable_channel:
                     report.skipped_count += 1
-                    log.warning(validation.skip_reason() or "Attribute not writable, skipped",
+                    log.warning(validation.skip_reason() or tr("log.not_writable_skipped"),
                                 node=record.name, attribute=group.name)
                     continue
 

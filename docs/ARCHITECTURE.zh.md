@@ -26,16 +26,16 @@ Hierarchy Traversal → Attribute Discovery → Type Resolution
 
 ## 2. 分层与数据流
 
-项目采用**扁平结构**：`core` / `ui` / `utils` / `tests` 直接位于项目根目录，
+项目采用**扁平结构**：`core` / `ui` / `utils` / `i18n` / `tests` 直接位于项目根目录，
 把项目根加入 `sys.path` 后即可 `import main`。入口与引导层：
 
 ```
-bootstrap.py    项目根置顶 + 顶层同名模块（core / ui / utils…）冲突接管与释放（含其缓存的子模块）
+bootstrap.py    项目根置顶 + 顶层同名模块（core / ui / utils / i18n…）冲突接管与释放（含其缓存的子模块）
 main.py         launch() / close() / reload_and_launch()，窗口生命周期与 scriptJob 回收
 __init__.py     可选门面：注入 sys.path 后转发到 main（支持 import BatchAttributeEditor）
 ```
 
-> 扁平结构的代价是 `core` / `ui` / `utils` 这些顶层名字很常见。`bootstrap` 会把项目根
+> 扁平结构的代价是 `core` / `ui` / `utils` / `i18n` 这些顶层名字很常见。`bootstrap` 会把项目根
 > 置顶到 `sys.path`，并默认释放同名顶层模块下所有**来自其它路径的模块及其缓存的子模块**
 > （例如别的工具残留的 `core.results`，否则会遮蔽本项目的导入）；发生接管时打印提示。
 > 该接管与其它扁平结构工具（如 `materialConvert`）对称：**后启动者赢**，已运行的工具
@@ -47,6 +47,7 @@ UI Layer (PySide6 / PySide2)
   panels.py                 范围 / 搜索 / 详情 / 预览 / 日志 区块
   attribute_model.py        搜索结果 → Qt 表格模型
   editors/*                 按属性类型动态生成的编辑器（ValueEditorFactory）
+  settings.py               语言持久化（QSettings 封装）
         │  （只调用 Core 的公开 API，不出现 cmds.setAttr）
         ▼
 Core Layer
@@ -67,6 +68,13 @@ Core Layer
 Utils
   maya_utils.py     节点/plug 名称派生、UUID 复查、DAG 判定等底层封装
   logging_utils.py  双通道日志（UI 友好信息 / 技术细节）
+        │
+        ▼
+i18n（纯 Python，无 Qt / Maya 依赖；Core 与 UI 都可引用）
+  manager.py        TranslationManager：词条查找、English 回退、{参数} 格式化、plural()
+  en.py             English reference 词条（与历史英文字符串逐字一致）
+  zh_cn.py          简体中文词条（key 集合与 en.py 完全一致，由测试强制）
+  __init__.py       公共 API：tr() / plural() / set_language() / get_language()
 ```
 
 **一条完整的数据流：**
@@ -319,6 +327,11 @@ MObject 生命周期风险：节点被删除后 MObject 失效。因此缓存内
   （`transform.overrideColorRGB`、`lambert.color`），而不是动态创建。
   工具本身对这两者的识别与写入均已实测通过。
 
+本地化层沿用同样的策略：语言切换在 mayapy 下有自动化测试覆盖，控件级重译另在 Maya 之外用
+**系统 Python 3.14 + PySide6 6.11（offscreen 平台，fake `maya` 包）**做过冒烟验证：窗口构建、
+English → 中文 → English 往返切换（窗口标题、按钮、表头、详情标签、编辑器单位提示、颜色
+编辑器按钮）。在 Maya 2024 中同一条代码路径运行于 PySide2 5.15.2。
+
 ---
 
 ## 10. UI 与 Core 的关系
@@ -340,3 +353,43 @@ Namespace 与 NodeType 过滤、Attribute 搜索历史。
 
 Core 的 `SearchEngine` 与 `BatchSetter` 均以"节点集合 + 属性定义"为输入，
 不假设节点来自 DAG 遍历，因此上述扩展不需要改动写入层。
+
+---
+
+## 12. 本地化（UI 语言：English / 中文）
+
+设计目标：**English 是默认语言与 reference 语言**；用户可随时在窗口中切换；文字立即刷新、
+无需重启 Maya；选择被持久化；业务逻辑与 Maya 数据不受影响。
+
+* **分层边界**：`i18n/` 是独立的纯 Python 包，Core 无需 Qt / Maya 即可使用，
+  且 `i18n` 不 import 本项目任何模块（无循环）。UI 只通过 `ui/qt.py` 兼容层访问 `QSettings`。
+* **基于 key 的词条**：使用稳定 key，如 `window.title`、`status.locked`、`preview.describe.main`。
+  英文与中文词条的 key 集合必须完全一致（由测试强制）。英文文案与历史字面量**逐字相同**，
+  因此切回 English 的输出与改动前完全一致（既有测试中的英文断言即回归保护网）。
+* **回退链**：当前语言 → English → key 本身。模板缺参数或格式非法时返回原文而不抛异常 ——
+  缺失翻译永远不会让工具崩溃。
+* **动态参数**：动态值一律用 `{命名}` 占位符（如 `tr("results.empty_no_match", count=7)`），
+  不在各控件里散落 f-string。`plural(count, "node")` 通过
+  `counts.<noun>.<one|other>` 词条输出 `2 nodes` / `2 个节点`；未知名词回退到历史英文复数规则。
+* **翻译边界**：工具自身 UI 文本（标题、按钮、tooltip、占位符、状态、报告、生成时的日志消息）
+  进翻译；Maya 数据不进翻译——节点 / 属性 / plug 名、枚举原始值、类型标签
+  （`Float`、`Double3` 等）、`definition.describe()` 技术元数据行、异常文本与 traceback 保持原样。
+* **立即刷新**：每个面板提供 `retranslate()`；`BatchAttributeEditorWindow._retranslate()`
+  更新静态文本、重放窗口持有的动态状态（选择状态、搜索摘要与空状态、当前属性详情、当前显示的
+  Preview/Apply 报告、校验错误、数值提示），并对**已存在**的编辑器调用 `retranslate()`。
+  控件不会被重建，用户已输入的值不会丢失。
+* **审计日志**：日志条目与批次头保留写入时的语言（它们是对已发生操作的记录）；切换后新产生的
+  条目使用新语言。空状态与面板框架跟随当前语言。
+* **持久化**：`ui/settings.py` 使用 `QSettings("BatchAttributeEditor", "BatchAttributeEditor")`，
+  key 为 `language`，NativeFormat（本平台为 Windows 注册表）——不新增配置文件、不写死路径。
+  首次启动（无记录）、空值或存储失败都回退到 English。`main.launch()` 在窗口构建文本**之前**
+  恢复持久化的语言。
+* **切换入口**：窗口右上角的 `Language:` 选择器（`English` / `中文`）。切换时调用
+  `set_language()`、保存选择并执行重译；`zh`、`zh-cn`、`en_US` 等写法会被规范化，
+  未知语言回退 English。
+* **引导层**：`bootstrap.TOP_LEVEL_MODULES` 已包含 `i18n`，因此 `reload_and_launch()` 与
+  同名模块接管会像其它顶层包一样处理它。
+
+覆盖：`tests/test_i18n.py`（manager 切换 / 回退 / 格式化 / 复数、词条 key 与占位符一致性、
+源码中字面量 `tr("...")` key 扫描、QSettings 假后端与真实后端持久化、Core 报告文本、
+GUI 语言切换）以及既有的英文断言。

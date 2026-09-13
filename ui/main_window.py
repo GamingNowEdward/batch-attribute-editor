@@ -22,6 +22,7 @@ from core.search import AggregatedAttribute, SearchResult
 from core.selection import SelectionManager
 from core.session import BatchAttributeSession
 from core.traversal import TraversalScope
+from i18n import get_language, normalize_language, set_language, tr
 from ui.attribute_model import AttributeTableModel
 from ui.editors.factory import ValueEditorFactory
 from ui.panels import (
@@ -32,7 +33,8 @@ from ui.panels import (
     SearchPanel,
     TechnicalPanel,
 )
-from ui.qt import Qt, QtCore, QtWidgets
+from ui.qt import Qt, QtCore, QSignalBlocker, QtWidgets
+from ui.settings import LanguageSettings
 from ui.styles import (
     COLUMN_SPACING,
     GROUP_INSET,
@@ -74,19 +76,34 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
     def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent)
         self.setObjectName(WINDOW_OBJECT_NAME)
-        self.setWindowTitle("Batch Attribute Editor")
+        self.setWindowTitle(tr("window.title"))
         self.setStyleSheet(STYLESHEET)
         self.resize(1280, 800)
 
         self.session = BatchAttributeSession()
         self.model = AttributeTableModel(self)
+        self._language_settings = LanguageSettings()
 
         self._editor = None
         self._current: Optional[AggregatedAttribute] = None
         self._channels: Tuple = ()
+        self._samples: dict = {}
         self._preview: Optional[PreviewReport] = None
         self._jobs: List[int] = []
         self._last_selection: List[str] = []
+        self._last_result: Optional[SearchResult] = None
+        self._last_summary = None
+        self._validation_error: Optional[BaseException] = None
+
+        #: Text currently shown above the editor:
+        #: ``None`` = rebuild from the attribute, a key = re-render with ``tr``
+        self._value_hint_key: Optional[str] = "value.select_hint"
+        self._value_hint_params: dict = {}
+
+        #: What the Preview panel currently shows (replayed on language switch):
+        #: ``None`` | ("tr", key, params, level) | ("raw", text, level)
+        #: | ("report", report, "preview"|"no_nodes"|"apply")
+        self._preview_view = None
 
         self._search_timer = QtCore.QTimer(self)
         self._search_timer.setSingleShot(True)
@@ -106,9 +123,11 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
     # ------------------------------------------------------------ construction
 
     def _build_ui(self) -> None:
-        root = QtWidgets.QHBoxLayout(self)
+        root = QtWidgets.QVBoxLayout(self)
         root.setContentsMargins(OUTER_MARGIN, OUTER_MARGIN, OUTER_MARGIN, OUTER_MARGIN)
-        root.setSpacing(COLUMN_SPACING)
+        root.setSpacing(ROW_SPACING)
+
+        root.addLayout(self._build_language_bar())
 
         # Left column: the selection workflow (scope → search → results).
         # Right area: Details / Value / Preview column next to Technical / Log.
@@ -125,6 +144,42 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         self.search_panel.search_requested.connect(self._on_search_requested)
         self.preview_panel.preview_requested.connect(self.update_preview)
         self.preview_panel.apply_requested.connect(self.apply_changes)
+
+    def _build_language_bar(self) -> QtWidgets.QHBoxLayout:
+        """Top-right language selector (English / Chinese)."""
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(ROW_SPACING)
+        row.addStretch(1)
+
+        self.language_label = QtWidgets.QLabel(tr("language.label"))
+        row.addWidget(self.language_label)
+
+        self.language_combo = QtWidgets.QComboBox()
+        self.language_combo.addItem(tr("language.english"), "en")
+        self.language_combo.addItem(tr("language.chinese"), "zh_CN")
+        blocker = QSignalBlocker(self.language_combo)
+        self.language_combo.setCurrentIndex(self._language_index())
+        del blocker
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+        row.addWidget(self.language_combo)
+        return row
+
+    def _language_index(self) -> int:
+        """Combo index matching the active language (0 when it is not listed)."""
+        target = normalize_language(get_language())
+        for index in range(self.language_combo.count()):
+            if self.language_combo.itemData(index) == target:
+                return index
+        return 0
+
+    def _on_language_changed(self, index: int) -> None:
+        """Switch the UI language immediately and persist the choice."""
+        code = self.language_combo.itemData(index)
+        if not code or not set_language(code):
+            return
+        self._language_settings.save(get_language())
+        self._retranslate()
 
     def _build_left_column(self) -> QtWidgets.QWidget:
         """Workflow column: scope, search and results, stacked vertically."""
@@ -146,7 +201,8 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
 
     def _build_results_view(self) -> QtWidgets.QWidget:
         """Results table with a dedicated empty state page."""
-        container = QtWidgets.QGroupBox("Results")
+        self.results_group = QtWidgets.QGroupBox(tr("results.title"))
+        container = self.results_group
         layout = QtWidgets.QVBoxLayout(container)
         layout.setContentsMargins(GROUP_INSET, 6, GROUP_INSET, 8)
         layout.setSpacing(ROW_SPACING)
@@ -163,7 +219,7 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         self.results_stack.addWidget(self.empty_state_label)
         layout.addWidget(self.results_stack, 1)
 
-        self.results_label = QtWidgets.QLabel("Nothing searched yet")
+        self.results_label = QtWidgets.QLabel(tr("results.nothing_searched"))
         self.results_label.setObjectName("hintLabel")
         layout.addWidget(self.results_label)
         return container
@@ -240,12 +296,12 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
 
     def _build_value_group(self) -> QtWidgets.QGroupBox:
         """Value editor group; the editor area scrolls when an attribute has many channels."""
-        group = QtWidgets.QGroupBox("Value")
+        group = QtWidgets.QGroupBox(tr("value.title"))
         layout = QtWidgets.QVBoxLayout(group)
         layout.setContentsMargins(GROUP_INSET, 6, GROUP_INSET, 8)
         layout.setSpacing(ROW_SPACING)
 
-        self.value_hint = QtWidgets.QLabel("Select an attribute above to edit it")
+        self.value_hint = QtWidgets.QLabel(tr("value.select_hint"))
         self.value_hint.setObjectName("hintLabel")
         self.value_hint.setWordWrap(True)
         layout.addWidget(self.value_hint)
@@ -385,7 +441,7 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
                 # keeps following the selection fast on large scenes.
                 self.session.resolve_selection(scope)
         except Exception as exc:  # noqa: BLE001 - the UI must not crash on a single failure
-            self.scope_panel.set_status(f"Reading the selection failed: {exc}")
+            self.scope_panel.set_status(tr("status.selection_failed", error=exc))
             return
 
         self._last_selection = [
@@ -394,10 +450,12 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         self.scope_panel.set_status(self.session.state.describe())
         self._current = None
         self._editor = None
+        self._last_summary = None
+        self._validation_error = None
         self._clear_value_area()
         self.details_panel.clear()
         self.technical_panel.clear()
-        self.preview_panel.set_message('Set a value, then click "Preview"')
+        self._show_preview_message("preview.set_value_hint")
         self.run_search()
 
     def _on_scope_changed(self, scope: TraversalScope) -> None:
@@ -425,6 +483,7 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         self._run_busy(action)
 
     def _apply_search_result(self, result: SearchResult) -> None:
+        self._last_result = result
         self.model.set_attributes(result.attributes)
 
         if result.attributes:
@@ -432,28 +491,32 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         else:
             self.results_stack.setCurrentWidget(self.empty_state_label)
 
-        if result.scanned_nodes == 0:
-            # The most common case: the window just opened and nothing is selected in the viewport
-            self.empty_state_label.setText(
-                "No nodes scanned yet — select nodes in the viewport"
-            )
-            self.results_label.setText("")
-        elif result.is_empty:
-            self.empty_state_label.setText(
-                f"No attribute matches (scanned {result.scanned_nodes} nodes)"
-            )
-            self.results_label.setText("")
-        else:
-            self.results_label.setText(result.describe())
+        self._update_result_labels(result)
 
         self._current = None
         self._editor = None
+        self._last_summary = None
+        self._validation_error = None
         self._clear_value_area()
         self.details_panel.clear()
         self.technical_panel.clear()
 
         if result.attributes:
             self.table.selectRow(0)
+
+    def _update_result_labels(self, result: SearchResult) -> None:
+        """Refresh the result summary / empty state (replayed on language switch)."""
+        if result.scanned_nodes == 0:
+            # The most common case: the window just opened and nothing is selected in the viewport
+            self.empty_state_label.setText(tr("results.empty_no_nodes"))
+            self.results_label.setText("")
+        elif result.is_empty:
+            self.empty_state_label.setText(
+                tr("results.empty_no_match", count=result.scanned_nodes)
+            )
+            self.results_label.setText("")
+        else:
+            self.results_label.setText(result.describe())
 
     # ------------------------------------------------------------ the selected attribute
 
@@ -465,7 +528,9 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         if attribute is None:
             return
         self._current = attribute
-        self.preview_panel.set_message('Set a value, then click "Preview"')
+        self._last_summary = None
+        self._validation_error = None
+        self._show_preview_message("preview.set_value_hint")
         self.details_panel.set_basic(attribute)
         self.technical_panel.set_text(attribute.definition.describe())
         self._build_editor(attribute)
@@ -480,11 +545,20 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         try:
             summary = attribute.summary(force=True)
         except Exception as exc:  # noqa: BLE001
-            self.details_panel.set_note(f"Validation failed: {exc}")
-            self.technical_panel.set_text(f"Validation failed: {exc}")
+            self._validation_error = exc
+            self._show_validation_error()
             return
         if attribute is self._current:
+            self._last_summary = summary
             self.details_panel.set_summary(summary)
+
+    def _show_validation_error(self) -> None:
+        """Render the stored validation failure (replayed on language switch)."""
+        if self._validation_error is None:
+            return
+        text = tr("status.validation_failed", error=self._validation_error)
+        self.details_panel.set_note(text)
+        self.technical_panel.set_text(text)
 
     def _clear_value_area(self) -> None:
         while self.value_container_layout.count():
@@ -493,32 +567,46 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()
-        self.value_hint.setText("Select an attribute above to edit it")
+        self._set_value_hint("value.select_hint")
         self._sync_value_area_height()
+
+    def _set_value_hint(self, key: Optional[str], **params) -> None:
+        """Show a static (translatable) hint above the editor."""
+        self._value_hint_key = key
+        self._value_hint_params = params
+        if key is not None:
+            self.value_hint.setText(tr(key, **params))
+
+    def _set_dynamic_value_hint(self) -> None:
+        """Show the hint built from the current attribute (type, units, ...)."""
+        self._value_hint_key = None
+        self._value_hint_params = {}
+        if self._current is not None:
+            self.value_hint.setText(
+                self._value_hint_text(self._current, self._channels, self._samples)
+            )
 
     def _build_editor(self, attribute: AggregatedAttribute) -> None:
         """Create the value editor for the attribute type."""
         self._clear_value_area()
 
         if not attribute.definition.supports_editing:
-            self.value_hint.setText(
-                f"{attribute.type_label} type is not editable yet "
-                "(recognition and inspection only)"
-            )
+            self._set_value_hint("value.not_editable", type=attribute.type_label)
             return
 
         channels = self.session.channels_for(attribute)
         self._channels = channels
         if not channels:
-            self.value_hint.setText("This attribute has no editable channels on the current nodes")
+            self._set_value_hint("value.no_channels")
             return
 
         samples = self.session.sample_values(attribute, channels)
+        self._samples = samples
         editor = ValueEditorFactory.create(
             attribute.definition, channels, samples, self.value_container
         )
         if editor is None:
-            self.value_hint.setText("Could not create an editor for this attribute")
+            self._set_value_hint("value.editor_failed")
             return
 
         self._editor = editor
@@ -530,48 +618,46 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         if callable(reload_callback):
             reload_callback(lambda: self._reload_values(attribute, editor))
 
-        self.value_hint.setText(self._value_hint_text(attribute, channels, samples))
+        self._set_dynamic_value_hint()
         self._sync_value_area_height()
 
     def _value_hint_text(self, attribute: AggregatedAttribute, channels, samples) -> str:
         """Hint above the editor: type, channel count, units and the "other types excluded" note."""
-        parts = [f"{attribute.type_label}, {attribute.node_count} nodes"]
+        parts = [tr("value.hint.type_nodes",
+                    type=attribute.type_label, count=attribute.node_count)]
         if len(channels) > 1:
-            parts.append(f"{len(channels)} channels")
+            parts.append(tr("value.hint.channels", count=len(channels)))
         units = [widget for widget in {getattr(c, "unit_type", None) for c in channels} if widget]
         if units:
-            parts.append("Values use Maya working units (degrees / centimetres / frames)")
+            parts.append(tr("value.hint.units"))
         if not samples:
-            parts.append("No current value could be read, please fill it in manually")
+            parts.append(tr("value.hint.no_samples"))
         if attribute.other_type_total:
-            parts.append(
-                f"{attribute.other_type_total} more nodes have this attribute name with a "
-                "different type and will be skipped automatically"
-            )
+            parts.append(tr("value.hint.other_types",
+                            count=attribute.other_type_total))
         return " · ".join(parts)
 
     def _reload_values(self, attribute: AggregatedAttribute, editor) -> None:
         """Read the current scene values into the editor again."""
         samples = self.session.sample_values(attribute, self._channels)
         if not samples:
-            self.value_hint.setText("Could not read the current value")
+            self._set_value_hint("value.read_failed")
             return
+        self._samples = samples
         editor.set_values(samples)
         self._on_value_changed()
 
     def _on_value_changed(self) -> None:
         """A value changed → the preview is invalid → disable "Apply"."""
         self._preview = None
-        self.preview_panel.set_message(
-            'Values changed — click "Preview" again', level="warning"
-        )
+        self._show_preview_message("preview.values_changed", level="warning")
 
     # ------------------------------------------------------------ preview and apply
 
     def _build_payload(self) -> Tuple[Optional[ValuePayload], List[str]]:
         """Turn the input from the editor into a type-safe payload."""
         if self._editor is None or self._current is None:
-            return None, ["Select an attribute to edit first"]
+            return None, [tr("preview.select_attribute")]
 
         # A typed but not-yet-committed numeric edit must be committed before
         # reading, otherwise the write would silently use the previous value.
@@ -581,7 +667,7 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
 
         values = self._editor.values()
         if not values:
-            return None, ["No channels are enabled"]
+            return None, [tr("preview.no_channels_enabled")]
 
         channels = {channel.key: channel for channel in self._channels}
         payload = ValuePayload()
@@ -602,10 +688,10 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         """Create the preview."""
         payload, problems = self._build_payload()
         if problems:
-            self.preview_panel.set_message("; ".join(problems), level="error")
+            self._show_preview_raw("; ".join(problems), level="error")
             return
         if payload is None:
-            self.preview_panel.set_message("Nothing to write", level="warning")
+            self._show_preview_message("preview.nothing_to_write", level="warning")
             return
 
         attribute = self._current
@@ -614,28 +700,24 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         def action() -> None:
             report = self.session.preview(attribute, payload)
             self._preview = report
-            detail = report.detail_text()
             if report.will_modify == 0:
-                self.preview_panel.set_message(
-                    "No nodes can be modified:\n"
-                    + (report.skip_summary() or "check your filters and scope"),
-                    level="warning",
-                )
-                self.preview_panel.node_list.setPlainText(detail)
+                self._show_preview_report(report, kind="no_nodes")
                 return
-            self.preview_panel.set_preview(report.describe(), detail)
+            self._show_preview_report(report, kind="preview")
 
         self._run_busy(action)
 
     def apply_changes(self) -> None:
         """Run the batch modification (the whole batch is a single Undo)."""
         if self._preview is None:
-            self.preview_panel.set_message("A preview is required before applying", level="warning")
+            self._show_preview_message("preview.require_preview", level="warning")
             return
 
         payload, problems = self._build_payload()
         if problems or payload is None:
-            self.preview_panel.set_message("; ".join(problems) or "Nothing to write", level="error")
+            self._show_preview_raw(
+                "; ".join(problems) or tr("preview.nothing_to_write"), level="error"
+            )
             return
 
         attribute = self._current
@@ -644,29 +726,124 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         def action() -> None:
             report: ApplyReport = self.session.apply(attribute, payload)
             self._preview = None
-            self.preview_panel.set_report(report.describe())
+            self._show_preview_report(report, kind="apply")
             self.log_panel.append_log(report.log, self._audit_header(report))
-            self.preview_panel.undo_hint.setText(
-                "Recorded as a single Undo (Ctrl+Z reverts the whole batch)"
-            )
             # Writing may change the lock state; revalidate so the details stay accurate
             QtCore.QTimer.singleShot(0, lambda: self._run_busy(
                 lambda: self._validate_current(attribute)))
 
         self._run_busy(action)
 
+    # ------------------------------------------------------------ preview panel state
+
+    def _show_preview_message(self, key: str, level: str = "hint", **params) -> None:
+        """Show a translatable hint; remembered so a language switch can replay it."""
+        self._preview_view = ("tr", key, params, level)
+        self.preview_panel.set_message(tr(key, **params), level=level)
+
+    def _show_preview_raw(self, text: str, level: str = "error") -> None:
+        """Show text that already contains data (input errors); not re-translated."""
+        self._preview_view = ("raw", text, level)
+        self.preview_panel.set_message(text, level=level)
+
+    def _show_preview_report(self, report, kind: str = "preview") -> None:
+        """Show a Preview/Apply report; rendered again on every language switch."""
+        self._preview_view = ("report", report, kind)
+        self._replay_preview_view()
+
+    def _replay_preview_view(self) -> None:
+        """Render the stored Preview panel state in the active language."""
+        view = self._preview_view
+        if view is None:
+            self.preview_panel.set_message(tr("preview.set_value_hint"))
+            return
+
+        kind = view[0]
+        if kind == "tr":
+            _kind, key, params, level = view
+            self.preview_panel.set_message(tr(key, **params), level=level)
+        elif kind == "raw":
+            _kind, text, level = view
+            self.preview_panel.set_message(text, level=level)
+        elif kind == "report":
+            _kind, report, mode = view
+            if mode == "preview":
+                self.preview_panel.set_preview(report.describe(), report.detail_text())
+            elif mode == "no_nodes":
+                self.preview_panel.set_message(
+                    tr("preview.no_nodes_modified",
+                       detail=report.skip_summary() or tr("preview.check_filters")),
+                    level="warning",
+                )
+                self.preview_panel.node_list.setPlainText(report.detail_text())
+            else:  # "apply"
+                self.preview_panel.set_report(report.describe())
+                self.preview_panel.undo_hint.setText(tr("preview.undo_hint"))
+
     # ------------------------------------------------------------ audit header
 
     @staticmethod
     def _audit_header(report: ApplyReport) -> str:
         """Header line of one audit batch: attribute, value, time and counts."""
-        counts = [f"{report.succeeded} changed"]
+        counts = [tr("log.count_changed", count=report.succeeded)]
         if report.skipped_count:
-            counts.append(f"{report.skipped_count} skipped")
+            counts.append(tr("log.count_skipped", count=report.skipped_count))
         if report.failed:
-            counts.append(f"{report.failed} failed")
-        return (f"── {report.attribute_name} · {report.value_repr} · "
-                f"{time.strftime('%H:%M:%S')} · {', '.join(counts)} ──")
+            counts.append(tr("log.count_failed", count=report.failed))
+        return tr("log.audit_header",
+                  attribute=report.attribute_name,
+                  value=report.value_repr,
+                  time=time.strftime("%H:%M:%S"),
+                  counts=", ".join(counts))
+
+    # ------------------------------------------------------------ retranslation
+
+    def _retranslate(self) -> None:
+        """Apply the newly selected language everywhere (no widget is recreated)."""
+        self.setWindowTitle(tr("window.title"))
+        self.language_label.setText(tr("language.label"))
+
+        blocker = QSignalBlocker(self.language_combo)
+        self.language_combo.setItemText(0, tr("language.english"))
+        self.language_combo.setItemText(1, tr("language.chinese"))
+        del blocker
+
+        self.scope_panel.retranslate()
+        self.search_panel.retranslate()
+        self.model.retranslate()
+        self.results_group.setTitle(tr("results.title"))
+        self.value_group.setTitle(tr("value.title"))
+        self.details_panel.retranslate()
+        self.technical_panel.retranslate()
+        self.preview_panel.retranslate()
+        self.log_panel.retranslate()
+
+        self.scope_panel.set_status(self.session.state.describe())
+        if self._last_result is not None:
+            self._update_result_labels(self._last_result)
+
+        if self._current is None:
+            self._set_value_hint("value.select_hint")
+        elif self._value_hint_key is None:
+            self._set_dynamic_value_hint()
+        else:
+            self.value_hint.setText(
+                tr(self._value_hint_key, **self._value_hint_params)
+            )
+
+        if self._current is not None:
+            self.details_panel.set_basic(self._current)
+            self.technical_panel.set_text(self._current.definition.describe())
+        if self._last_summary is not None and self._current is not None:
+            self.details_panel.set_summary(self._last_summary)
+        if self._validation_error is not None:
+            self._show_validation_error()
+
+        retranslate_editor = getattr(self._editor, "retranslate", None)
+        if callable(retranslate_editor):
+            retranslate_editor()
+
+        self._replay_preview_view()
 
     # ------------------------------------------------------------ busy wrapper
 
@@ -684,7 +861,7 @@ class BatchAttributeEditorWindow(_DOCKABLE_BASE, QtWidgets.QWidget):  # type: ig
         except Exception as exc:  # noqa: BLE001 - the UI must be fault tolerant
             import traceback
 
-            self.scope_panel.set_status(f"Operation failed: {exc}")
+            self.scope_panel.set_status(tr("status.operation_failed", error=exc))
             self.log_panel.append(f"[ERROR] {exc}\n{traceback.format_exc()}")
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()

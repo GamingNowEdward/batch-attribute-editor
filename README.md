@@ -107,6 +107,17 @@ type, plug name) are kept in the log.
 
 ---
 
+## UI language (English / 中文)
+
+The interface ships in **English** (the default) and **Simplified Chinese**. The selector in the
+top-right corner of the window switches languages **instantly — no Maya restart** — and the choice is
+remembered for the next launch. All tool text is translated (titles, buttons, tooltips, filters,
+statuses, reports, log messages); **Maya data is never translated** (node / attribute / plug names,
+enum field values, type labels such as `Float` / `Double3`, exception text). See
+[`docs/USAGE.md`](docs/USAGE.md) for the details.
+
+---
+
 ## Project layout
 
 ```
@@ -132,18 +143,23 @@ BatchAttributeEditor/      ← add this directory to sys.path
         panels.py          Scope / Attribute Search / Results / Attribute Details / Value / Preview / Report sections
         attribute_model.py results table model
         editors/           editors generated on the fly from the attribute type (ValueEditorFactory)
+        settings.py        language persistence (QSettings wrapper)
         main_window.py     window orchestration
+    i18n/                  pure-Python localization used by Core and UI
+        manager.py         translation manager: lookup, English fallback, {param} formatting, plural()
+        en.py              English reference catalog
+        zh_cn.py           Simplified Chinese catalog
     utils/
         maya_utils.py      node/plug name derivation, UUID re-checks
         logging_utils.py   two-channel logging (user-readable / technical detail)
-    tests/                 142 tests (run under mayapy)
+    tests/                 171 tests (run under mayapy)
     tools/selfcheck.py     self-check script that runs inside a real Maya
     docs/                  documentation (install / usage / architecture / limitations)
 ```
 
-The price of the flat layout is that top-level names such as `core` / `ui` / `utils` / `tests` are
-very common and may collide with other plug-ins using the same layout (for example the sibling
-`materialConvert` tool). At launch the tool therefore:
+The price of the flat layout is that top-level names such as `core` / `ui` / `utils` / `i18n` /
+`tests` are very common and may collide with other plug-ins using the same layout (for example the
+sibling `materialConvert` tool). At launch the tool therefore:
 
 * puts its own root **first** on `sys.path` so its packages win the lookup;
 * evicts foreign modules with the same top-level names — **including cached submodules** such as a
@@ -171,7 +187,7 @@ To run a single module:
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-Current result: **all 142 tests pass** (of which the 12 widget tests that need a real GUI are skipped
+Current result: **all 171 tests pass** (of which the 13 widget tests that need a real GUI are skipped
 in batch mode).
 
 | Test file | Coverage |
@@ -183,6 +199,7 @@ in batch mode).
 | `test_batch_setter.py` | Batch writing per type, colours not clamped, multi does not create new elements, missing/locked/connected skips, one failing node does not abort the batch, same name with different types only edits compatible nodes |
 | `test_undo.py` | One Apply = one Undo, Redo, still one Undo after a partial failure, still one Undo with 150 nodes, a control group proving the chunk is necessary |
 | `test_session.py` | End-to-end workflow, self-consistent preview statistics, cache and refresh, 1500+ node performance |
+| `test_i18n.py` | Language manager switching / fallback / formatting / plural, key + placeholder parity, literal `tr("...")` key scan, QSettings persistence (fake + real backends), Core report texts, GUI language-switch test |
 | `test_ui_smoke.py` | UI module imports, factory registry completeness, results table model; the widget tests run in a GUI session |
 
 To run one end-to-end self-check inside a real Maya GUI (it creates temporary nodes and deletes them
@@ -201,9 +218,10 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | Area | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 142 tests pass under Maya 2024.2 mayapy |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 171 tests pass under Maya 2024.2 mayapy (13 GUI tests skipped in batch mode) |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (including a 150-node batch and partial-failure scenarios) |
 | UI module import and factory dispatch | ✅ verified automatically |
+| Localization (language switch / fallback / persistence / Core texts) | ✅ automated under mayapy; the widget-level retranslation was additionally smoke-verified with PySide6 6.11 (offscreen, fake `maya`) |
 | **UI window construction and display** | ✅ confirmed in a real Maya 2024.2 GUI (`tools/selfcheck.py`, PySide2 5.15.2) |
 | **UI interaction details** (button clicks, colour picker, dock dragging) | ⚠️ not covered by automation, needs manual confirmation |
 

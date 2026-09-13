@@ -22,6 +22,7 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Optional, Type
 
+from i18n import tr
 from utils.logging_utils import describe_exception, OperationLog
 
 DEFAULT_CHUNK_NAME = "Batch Attribute Editor"
@@ -70,7 +71,7 @@ class UndoManager:
         try:
             cmds.undoInfo(openChunk=True, chunkName=self.name)
         except RuntimeError as exc:
-            self._record(f"Could not open Undo Chunk: {describe_exception(exc)}")
+            self._record(tr("log.undo_open_failed", error=describe_exception(exc)))
             return False
         self._opened = True
         return True
@@ -89,7 +90,7 @@ class UndoManager:
         try:
             cmds.undoInfo(closeChunk=True)
         except RuntimeError as exc:
-            self._record(f"Failed to close Undo Chunk: {describe_exception(exc)}")
+            self._record(tr("log.undo_close_failed", error=describe_exception(exc)))
         finally:
             self._opened = False
 

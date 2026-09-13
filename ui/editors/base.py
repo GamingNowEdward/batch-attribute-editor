@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from core.types import AttributeDefinition, AttributeKind, ChannelSpec
+from i18n import tr
 from ui.qt import QtCore, QtWidgets, Signal
 
 ChannelKey = Tuple[Optional[int], Optional[int]]
@@ -50,7 +51,7 @@ class ChannelWidget(QtWidgets.QWidget):
         if checkable:
             self._checkbox = QtWidgets.QCheckBox()
             self._checkbox.setChecked(True)
-            self._checkbox.setToolTip("These channels are written")
+            self._checkbox.setToolTip(tr("editor.channels_written"))
             self._checkbox.toggled.connect(lambda _: self.changed.emit())
             self._layout.addWidget(self._checkbox)
 
@@ -110,21 +111,28 @@ class ChannelWidget(QtWidgets.QWidget):
 
     def unit_hint(self) -> str:
         """Unit hint (angle / distance / time and so on)."""
-        return {
-            AttributeKind.ANGLE: "Degrees",
-            AttributeKind.DISTANCE: "Centimeters",
-            AttributeKind.TIME: "Frames",
-        }.get(self.channel.kind, "")
+        key = {
+            AttributeKind.ANGLE: "unit.degrees",
+            AttributeKind.DISTANCE: "unit.centimeters",
+            AttributeKind.TIME: "unit.frames",
+        }.get(self.channel.kind)
+        return tr(key) if key else ""
 
     def _apply_tooltip(self) -> None:
         parts = [f"{self.channel.kind.display_name}"]
         unit = self.unit_hint()
         if unit:
-            parts.append(f"Unit: {unit}")
+            parts.append(tr("editor.tooltip.unit", unit=unit))
         hint = self.range_hint()
         if hint:
-            parts.append(f"Maya range: {hint}")
+            parts.append(tr("editor.tooltip.maya_range", range=hint))
         self.setToolTip(" · ".join(parts))
+
+    def retranslate(self) -> None:
+        """Refresh the localized texts after a language switch."""
+        if self._checkbox is not None:
+            self._checkbox.setToolTip(tr("editor.channels_written"))
+        self._apply_tooltip()
 
     def _notify(self) -> None:
         self.changed.emit()
@@ -198,6 +206,13 @@ class ValueEditor(QtWidgets.QWidget):
 
     def _on_channel_changed(self) -> None:
         self.changed.emit()
+
+    def retranslate(self) -> None:
+        """Refresh the localized tooltips of every channel widget."""
+        for widget in self._widgets.values():
+            retranslate = getattr(widget, "retranslate", None)
+            if callable(retranslate):
+                retranslate()
 
     # ------------------------------------------------------------ get / set values
 

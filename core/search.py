@@ -32,6 +32,7 @@ from core.compatibility import (
 )
 from core.traversal import NodeRecord
 from core.types import AttributeDefinition, AttributeKind
+from i18n import tr
 from utils.logging_utils import plural
 
 
@@ -205,9 +206,11 @@ class SearchResult:
     def describe(self) -> str:
         """Status bar summary."""
         total_nodes = sum(item.node_count for item in self.attributes)
-        return (f"Matched {plural(len(self.attributes), 'attribute')} / "
-                f"{plural(total_nodes, 'attribute instance')}"
-                f" (scanned {plural(self.scanned_nodes, 'node')}, {self.elapsed * 1000:.0f} ms)")
+        return tr("search.result.describe",
+                  attributes=plural(len(self.attributes), "attribute"),
+                  instances=plural(total_nodes, "attribute instance"),
+                  nodes=plural(self.scanned_nodes, "node"),
+                  ms=f"{self.elapsed * 1000:.0f}")
 
 
 class SearchEngine:

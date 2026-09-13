@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import List, Optional, Sequence
 
 from core.search import AggregatedAttribute
+from i18n import tr
 from ui.qt import QtCore, QtGui, Qt
 from ui.styles import WARNING
 
@@ -18,7 +19,12 @@ from ui.styles import WARNING
 class AttributeTableModel(QtCore.QAbstractTableModel):
     """Result model with one row per "attribute + type" pair."""
 
+    #: Internal column names (stable keys; kept for compatibility)
     HEADERS = ("Attribute", "Type", "Nodes", "Other types")
+
+    #: Translation keys of the column headers
+    HEADER_KEYS = ("table.attribute", "table.type", "table.nodes",
+                   "table.other_types")
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -36,8 +42,8 @@ class AttributeTableModel(QtCore.QAbstractTableModel):
         if orientation != Qt.Horizontal:
             return None
         if role == Qt.DisplayRole:
-            if 0 <= section < len(self.HEADERS):
-                return self.HEADERS[section]
+            if 0 <= section < len(self.HEADER_KEYS):
+                return tr(self.HEADER_KEYS[section])
             return None
         if role == Qt.TextAlignmentRole:
             # The numeric columns align right, exactly like their cells.
@@ -67,17 +73,17 @@ class AttributeTableModel(QtCore.QAbstractTableModel):
 
         if role == Qt.ToolTipRole:
             lines = [
-                f"Long name: {attribute.name}",
-                f"Short name: {attribute.short_name}",
-                f"Type: {attribute.type_label}",
+                tr("table.tooltip.long_name", name=attribute.name),
+                tr("table.tooltip.short_name", name=attribute.short_name),
+                tr("table.tooltip.type", type=attribute.type_label),
                 attribute.definition.describe(),
-                f"Nodes involved: {attribute.node_count}",
+                tr("table.tooltip.nodes", count=attribute.node_count),
             ]
             if attribute.other_type_total:
                 other_types = ", ".join(
                     f"{label} × {count}" for label, count in attribute.other_types.items()
                 )
-                lines.append("Nodes with the same name but a different type: " + other_types)
+                lines.append(tr("table.tooltip.other_types", types=other_types))
             return "\n".join(lines)
 
         if role == Qt.TextAlignmentRole and column >= 2:
@@ -87,6 +93,12 @@ class AttributeTableModel(QtCore.QAbstractTableModel):
             return QtGui.QBrush(QtGui.QColor(WARNING))
 
         return None
+
+    # ------------------------------------------------------------ localization
+
+    def retranslate(self) -> None:
+        """Re-render the column headers after a language switch."""
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.HEADER_KEYS) - 1)
 
     # ------------------------------------------------------------ data access
 

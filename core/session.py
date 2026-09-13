@@ -43,6 +43,7 @@ from core.traversal import (
 )
 from core.type_resolver import build_channels, resolve_channel_plug
 from core.types import ChannelSpec
+from i18n import tr
 from utils import maya_utils
 from utils.logging_utils import plural
 
@@ -66,7 +67,7 @@ class SessionState:
         ``2 nodes (1 roots) · 2 nodes, 2 transforms, 0 shapes``.
         """
         if not self.node_count:
-            return self.selection_note or "not selected"
+            return self.selection_note or tr("session.not_selected")
 
         parts: List[str] = []
         if self.summary is not None:

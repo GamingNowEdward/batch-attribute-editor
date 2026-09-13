@@ -12,6 +12,7 @@ from core.compatibility import (
     status_label,
 )
 from core.types import ChannelSpec
+from i18n import tr
 from utils.logging_utils import OperationLog, plural
 
 
@@ -46,8 +47,10 @@ class ChannelChange:
 
     def describe_change(self) -> str:
         """One-line change description: ``Value: 1 → 18``."""
-        return (f"{self.channel.display_label}: "
-                f"{format_value(self.current)} → {format_value(self.value)}")
+        return tr("preview.change_line",
+                  label=self.channel.display_label,
+                  old=format_value(self.current),
+                  new=format_value(self.value))
 
 
 @dataclass
@@ -74,9 +77,10 @@ class PreviewItem:
         if self.will_modify:
             blocked = self.validation.blocked_channels
             if blocked:
-                return "Some channels skipped: " + ", ".join(
+                reasons = ", ".join(
                     dict.fromkeys(state.reason for state in blocked if state.reason)
                 )
+                return tr("preview.some_channels_skipped", reasons=reasons)
             return ""
         return self.validation.skip_reason()
 
@@ -132,21 +136,25 @@ class PreviewReport:
         ):
             value = self.count(status)
             if value:
-                parts.append(f"{value} {status_label(status)}")
+                parts.append(tr("preview.skip_count",
+                                count=value, label=status_label(status)))
         return ", ".join(parts)
 
     def describe(self) -> str:
         """One-line summary."""
-        text = (f"Will modify {plural(self.will_modify, 'node')} "
-                f"({plural(self.channel_writes, 'channel')}), skip {self.skipped}")
+        text = tr("preview.describe.main",
+                  nodes=plural(self.will_modify, "node"),
+                  channels=plural(self.channel_writes, "channel"),
+                  skipped=self.skipped)
         if self.partial:
-            text += f", {plural(self.partial, 'node')} with partially skipped channels"
+            text += tr("preview.describe.partial",
+                       nodes=plural(self.partial, "node"))
         detail = self.skip_summary()
         if detail:
-            text += f"\nSkip reasons: {detail}"
+            text += tr("preview.describe.skip_reasons", reasons=detail)
         if self.other_type_total:
-            text += (f"\n{plural(self.other_type_total, 'node')} with the same attribute name "
-                     f"but a different type (excluded)")
+            text += tr("preview.describe.other_types",
+                       nodes=plural(self.other_type_total, "node"))
         return text
 
     def modify_names(self, limit: int = 500) -> List[str]:
@@ -182,7 +190,7 @@ class PreviewReport:
             if len(lines) >= limit:
                 hidden += 1
                 continue
-            reason = item.skip_reason or "skipped"
+            reason = item.skip_reason or tr("preview.skipped_fallback")
             lines.append(f"{item.display_name}   {reason}")
         if hidden:
             lines.append(f"... {plural(hidden, 'more skipped node')}")
@@ -198,13 +206,13 @@ class PreviewReport:
         chunks: List[str] = []
         changes = self.change_lines()
         if changes:
-            chunks.append("── Will modify ──")
+            chunks.append(tr("preview.detail.will_modify"))
             chunks.extend(changes)
         skipped = self.skipped_lines()
         if skipped:
             if chunks:
                 chunks.append("")
-            chunks.append("── Skipped ──")
+            chunks.append(tr("preview.detail.skipped"))
             chunks.extend(skipped)
         return "\n".join(chunks)
 
@@ -251,14 +259,15 @@ class ApplyReport:
 
     def describe(self) -> str:
         """One-line summary."""
-        text = f"Succeeded:{self.succeeded}"
+        text = tr("apply.describe.succeeded", count=self.succeeded)
         if self.skipped_count:
-            text += f"  Skipped:{self.skipped_count}"
-        text += f"  Failed:{self.failed}"
+            text += tr("apply.describe.skipped", count=self.skipped_count)
+        text += tr("apply.describe.failed", count=self.failed)
         if self.touched_nodes:
-            text += f"  ({plural(self.touched_nodes, 'node')} touched)"
+            text += tr("apply.describe.touched",
+                       nodes=plural(self.touched_nodes, "node"))
         if self.elapsed:
-            text += f"  Elapsed {self.elapsed * 1000:.0f} ms"
+            text += tr("apply.describe.elapsed", ms=f"{self.elapsed * 1000:.0f}")
         return text
 
     def failures(self) -> List[ApplyItemResult]:

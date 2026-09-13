@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Sequence, Set, Tuple
 
 from core.traversal import DagTraversal, NodeRecord
+from i18n import tr
 from utils import maya_utils
 from utils.logging_utils import plural
 
@@ -36,12 +37,12 @@ class SelectionResult:
     def describe(self) -> str:
         """One-line summary for the UI status bar."""
         if self.is_empty:
-            return "No nodes selected — select something in the viewport"
+            return tr("selection.empty")
         text = plural(len(self.roots), "root node")
         if self.covered:
-            text += f", {len(self.covered)} de-duplicated (covered by another root)"
+            text += tr("selection.covered", count=len(self.covered))
         if self.ignored:
-            text += f", {len(self.ignored)} ignored"
+            text += tr("selection.ignored", count=len(self.ignored))
         return text
 
 

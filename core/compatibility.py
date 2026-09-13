@@ -36,6 +36,7 @@ from core.type_resolver import (
     resolve_channel_plug,
 )
 from core.types import AttributeDefinition, ChannelSpec
+from i18n import tr
 from utils import maya_utils
 
 
@@ -54,7 +55,7 @@ class ValidationStatus(enum.Enum):
     UNSUPPORTED = "unsupported"
 
 
-#: User-facing status descriptions
+#: English status descriptions (reference text; display goes through status_label)
 STATUS_LABELS: Dict[ValidationStatus, str] = {
     ValidationStatus.OK: "Writable",
     ValidationStatus.NODE_MISSING: "Node no longer exists",
@@ -68,13 +69,21 @@ STATUS_LABELS: Dict[ValidationStatus, str] = {
     ValidationStatus.UNSUPPORTED: "Unsupported type",
 }
 
+#: Localization keys for the status descriptions
+STATUS_LABEL_KEYS: Dict[ValidationStatus, str] = {
+    status: f"status.{status.value}" for status in ValidationStatus
+}
+
 #: Statuses that must be counted as "skipped" (everything other than OK)
 BLOCKING_STATUSES = tuple(status for status in ValidationStatus if status is not ValidationStatus.OK)
 
 
 def status_label(status: ValidationStatus) -> str:
-    """User-facing text for a status."""
-    return STATUS_LABELS.get(status, status.value)
+    """User-facing text for a status (localized; English is the fallback)."""
+    key = STATUS_LABEL_KEYS.get(status)
+    if key is None:
+        return status.value
+    return tr(key)
 
 
 @dataclass
@@ -181,7 +190,11 @@ class ValidationSummary:
 
     def describe(self) -> str:
         """Summary text."""
-        parts = [f"Matched {self.total}", f"Writable {self.writable}", f"Skipped {self.skipped}"]
+        parts = [
+            tr("summary.matched", count=self.total),
+            tr("summary.writable", count=self.writable),
+            tr("summary.skipped", count=self.skipped),
+        ]
         for status in (
             ValidationStatus.LOCKED,
             ValidationStatus.CONNECTED,
@@ -192,7 +205,8 @@ class ValidationSummary:
         ):
             value = self.count(status)
             if value:
-                parts.append(f"{status_label(status)} {value}")
+                parts.append(tr("summary.status_count",
+                                label=status_label(status), count=value))
         return ", ".join(parts)
 
 
@@ -267,8 +281,9 @@ class CompatibilityValidator:
                 definition=definition,
                 current_name=current_name,
                 statuses=(ValidationStatus.TYPE_MISMATCH,),
-                reasons=(f"{status_label(ValidationStatus.TYPE_MISMATCH)}"
-                         f" (node has {definition.type_label})",),
+                reasons=(tr("status.type_mismatch_detail",
+                            status=status_label(ValidationStatus.TYPE_MISMATCH),
+                            type=definition.type_label),),
             )
 
         if not definition.is_readable:

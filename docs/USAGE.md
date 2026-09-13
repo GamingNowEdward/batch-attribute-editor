@@ -30,7 +30,23 @@
 │                              │ [Preview]  [Apply]      │                     │
 │                              │ Recorded as one Undo    │                     │
 └──────────────────────────────┴─────────────────────────┴─────────────────────┘
+                             Language: [English ▼]   (top-right corner)
 ```
+
+### Language (English / 中文)
+
+The window starts in **English**. The selector in the **top-right corner** switches the whole
+interface to Chinese immediately — no Maya restart is needed:
+
+* every tool text follows the switch: window title, section titles, buttons, tooltips,
+  placeholders, filters, status lines, Attribute Details fields, Preview / Apply reports and log
+  messages produced after the switch;
+* **Maya data is never translated**: node names, attribute names, plug names, enum field values,
+  type labels (`Float`, `Double3`, …), technical metadata and exception text stay as they are;
+* the choice is stored with `QSettings` (the Windows registry by default) and restored the next
+  time the tool opens; a first launch with no stored value uses English;
+* audit-log entries keep the language they were written in — they are a record of past operations;
+  the empty state and the panel frame follow the current language.
 
 ---
 

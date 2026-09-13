@@ -120,11 +120,11 @@ def merge_reasons(reasons: Iterable[str]) -> str:
 
 
 def plural(count: int, singular: str, plural_form: Optional[str] = None) -> str:
-    """Render ``<count> <noun>`` with correct English pluralisation.
+    """Render ``<count> <noun>`` with correct pluralisation.
 
-    The status/report strings are user-visible, so ``1 nodes`` is not acceptable:
-    the singular form is used for exactly one, otherwise the plural form
-    (``singular + "s"`` unless an explicit irregular form is supplied).
+    Delegates to the localization manager so a user-visible report can be
+    rendered in any supported language; the English pluralisation below is the
+    fallback kept for unknown nouns (identical to the historical behaviour).
 
     >>> plural(1, "node")
     '1 node'
@@ -133,5 +133,6 @@ def plural(count: int, singular: str, plural_form: Optional[str] = None) -> str:
     >>> plural(2, "intermediate", "intermediates")
     '2 intermediates'
     """
-    word = singular if count == 1 else (plural_form or f"{singular}s")
-    return f"{count} {word}"
+    from i18n import plural as localized_plural
+
+    return localized_plural(count, singular, plural_form)

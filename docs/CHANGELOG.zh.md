@@ -2,6 +2,49 @@
 
 # 更新日志
 
+## 2026-09-14
+
+### 修复
+
+- `ui/panels.py`：`SearchPanel` 的过滤器复选框现在等到全部创建完成后才连接 `toggled` 信号 ——
+  此前构造期间的 `setChecked(True)` 会在其余复选框创建之前触发 `toggled`（PySide 会打印但吞掉
+  该 `AttributeError`）
+- `ui/panels.py`：文本交互掩码由裸写的 `| 0x1` 改为 `Qt.TextSelectableByMouse`，使窗口在
+  PySide6 / Qt 6 的严格枚举下也能构建
+
+### 新增
+
+- **中英文界面切换（English / 中文）**：窗口右上角新增 `Language:` 选择器；默认 English，
+  切换立即生效（无需重启 Maya），原地刷新全部面板、不重建控件；选择通过 `QSettings` 持久化，
+  下次启动自动恢复（首次启动默认 English）
+- 新增顶层 `i18n/` 包（纯 Python，无 Qt / Maya 依赖，Core 与 UI 均可引用）：
+  `manager.py`（词条查找、English 回退、`{参数}` 格式化、`plural()`）、`en.py`（English reference
+  词条，与原有英文字面量逐字一致）、`zh_cn.py`（简体中文；key 集合由测试强制与英文一致）
+- `ui/settings.py`：`LanguageSettings` —— 一个可注入后端的小型 QSettings 封装
+- `tests/test_i18n.py`：29 个测试 —— manager 切换 / 回退 / 格式化 / 复数、词条 key 与占位符
+  一致性、源码中字面量 `tr("...")` key 扫描、假后端与真实 QSettings 后端持久化、Core 报告文本、
+  以及 GUI 语言切换测试
+
+### 变更
+
+- 所有用户可见文本改为经由 `i18n.tr()` / `i18n.plural()`：窗口标题、区块标题、按钮、tooltip、
+  占位符、过滤器、状态栏、属性详情、结果表头、技术详情占位符、预览 / 应用报告、批量写入与
+  类型转换错误消息、审计头。英文词条逐字复刻原有字面量，因此既有英文断言与行为完全不变
+- 切换语言时会重放窗口持有的动态状态（选择状态、搜索摘要 / 空状态、当前属性详情与校验、
+  当前显示的预览 / 应用报告、数值提示），并对已有编辑器调用 `retranslate()`；
+  审计日志条目保留写入时的语言
+- Maya 数据**刻意不翻译**：节点 / 属性 / plug 名、枚举原始值、类型标签（`Float`、`Double3` 等）、
+  `definition.describe()` 元数据与异常文本均保持原样
+- `bootstrap.TOP_LEVEL_MODULES` 加入 `i18n`，同名模块接管与 `reload_and_launch()` 覆盖新包
+
+### 文档
+
+- README / ARCHITECTURE / USAGE / INSTALL / LIMITATIONS（中英）补充：本地化架构、语言选择器、
+  持久化与重置方式、翻译与 Maya 数据的边界，以及本地化已知限制（审计日志语言、原始校验错误、
+  类型标签保持英文）
+- 文档中的测试数量更新为 **171**（13 个 GUI 测试在 batch 模式下跳过）：README、INSTALL、
+  LIMITATIONS（中英）
+
 ## 2026-09-11
 
 ### 修复

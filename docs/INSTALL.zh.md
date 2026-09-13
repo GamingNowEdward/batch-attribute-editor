@@ -130,7 +130,8 @@ main.launch()
 2. **范围（Scope）** 选择「当前选择 + 所有后代（含 Shape）」；
 3. 工具会自动扫描当前选择，状态栏应显示扫描到的节点数，例如
    `17 nodes, 11 transforms, 6 shapes · 1 root node`；
-4. 在搜索框输入 `visibility`，**结果（Results）**里应出现 `visibility | Boolean | <节点数>`。
+4. 在搜索框输入 `visibility`，**结果（Results）**里应出现 `visibility | Boolean | <节点数>`；
+5. （可选）把右上角的 `语言：` 选择器切到中文 —— 整个窗口应立即更新，切回 English 应立即恢复。
 
 ### 3.2 完整自检（会建临时节点，用完即删）
 
@@ -153,7 +154,7 @@ tools.selfcheck.run(create_test_nodes=True)
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py
 ```
 
-预期输出 `Ran 142 tests ... OK`（其中 12 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
+预期输出 `Ran 171 tests ... OK`（其中 13 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
 
 这些测试**不会**影响你正在使用的 Maya 会话：`mayapy` 是独立进程，使用自己的临时场景。
 
@@ -164,7 +165,10 @@ tools.selfcheck.run(create_test_nodes=True)
 * 方式 A / B / C：删除工具架按钮，或不再执行那几行代码即可；
 * 方式 D / E：删除 `scripts\BatchAttributeEditor` 文件夹，并移除 `userSetup.py` 里加入的片段；
 * 工具**不会**向场景写入任何数据（不创建节点、不写属性、不加 scriptNode），
-  因此已经打开的场景文件里不会残留任何东西。
+  因此已经打开的场景文件里不会残留任何东西；
+* 场景之外唯一的持久化痕迹是界面语言偏好，由 `QSettings` 记录在注册表
+  `HKEY_CURRENT_USER\Software\BatchAttributeEditor\BatchAttributeEditor`（值 `language`）；
+  需要彻底清理时删除该注册表键即可。缺失或非法值只会回退到 English，保留也无副作用。
 
 ---
 
@@ -191,3 +195,8 @@ Maya 会话中共存（"后启动者赢"）。如果问题依旧，检查是否�
 **Q：想停靠到右侧面板？**
 窗口默认浮动打开，直接拖到 Maya 的停靠区域即可；
 也可以在代码里用 `main.launch(dock=True)` 直接停靠到右侧。
+
+**Q：怎么把界面切换成中文（或切回英文）？**
+用窗口右上角的 `语言：` 选择器即可，立即生效、不需要重启 Maya。选择会被记住，下次打开工具
+自动恢复（首次启动默认 English）。如果想手动重置，删除注册表键
+`HKEY_CURRENT_USER\Software\BatchAttributeEditor\BatchAttributeEditor` 后会回退到 English。
