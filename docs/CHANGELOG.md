@@ -6,6 +6,11 @@
 
 ### Fixed
 
+- Audit-log entries now keep **their whole** creation-time language: the `detail:` prefix was
+  resolved from the *current* language during `LogPanel.refresh()`, so a language switch could mix
+  languages inside one historical entry (an English entry showing a Chinese `详情：`, for example);
+  the prefix is now captured when the batch is appended (`ui/panels.py`), with regression tests for
+  both switch directions and for mixed-language history
 - `ui/panels.py`: the `SearchPanel` filter checkboxes now connect their `toggled` signals only after
   all of them exist — previously `setChecked(True)` during construction emitted `toggled` before the
   remaining checkboxes were created (an `AttributeError` that PySide printed but swallowed)
@@ -23,9 +28,10 @@
   English reference catalog, byte-identical to the previous literals) and `zh_cn.py` (Simplified
   Chinese; its key set is enforced to match the English one by a test)
 - `ui/settings.py`: `LanguageSettings` — a small QSettings wrapper with an injectable backend
-- `tests/test_i18n.py`: 29 tests — manager switching / fallback / formatting / plural, catalog key
+- `tests/test_i18n.py`: 32 tests — manager switching / fallback / formatting / plural, catalog key
   and placeholder parity, a source scan for literal `tr("...")` keys, persistence through fake and
-  real QSettings backends, Core report texts, and a GUI language-switch test
+  real QSettings backends, Core report texts, a GUI language-switch test, and audit-log language
+  freeze tests (English→Chinese, Chinese→English, mixed history)
 
 ### Changed
 
@@ -50,7 +56,7 @@
   architecture, the language selector, persistence and how to reset it, what is translated versus
   Maya data, and the localization limitations (audit-log language, raw validation errors, English
   type labels)
-- Test count refreshed to **171** (13 GUI tests are skipped in batch mode) in README, INSTALL and
+- Test count refreshed to **174** (16 GUI tests are skipped in batch mode) in README, INSTALL and
   LIMITATIONS (en + zh)
 
 ## 2026-09-11

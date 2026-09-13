@@ -448,3 +448,86 @@ class UILanguageTest(unittest.TestCase):
         finally:
             window.teardown()
             window.deleteLater()
+
+    # ------------------------------------------------- audit log language freeze
+
+    @staticmethod
+    def _log_text(panel) -> str:
+        """The rendered log with non-breaking spaces normalised."""
+        return panel.text.toPlainText().replace("\u00a0", " ")
+
+    @staticmethod
+    def _entry(message: str, detail: str):
+        from utils.logging_utils import LogEntry, LogLevel
+
+        return LogEntry(level=LogLevel.INFO, message=message, detail=detail)
+
+    def test_english_audit_batch_keeps_english_after_switching_to_chinese(self) -> None:
+        """Scenario 1: an English batch keeps its 'detail:' prefix in Chinese mode."""
+        from utils.logging_utils import OperationLog
+        from ui.panels import LogPanel
+
+        panel = LogPanel()
+        try:
+            log = OperationLog(title="batch")
+            log.entries.append(self._entry("EN-MESSAGE", "EN-DETAIL"))
+            panel.append_log(log, "── EN-HEADER ──")
+
+            i18n.set_language("zh_CN")
+            panel.refresh()
+            text = self._log_text(panel)
+
+            self.assertIn("detail: EN-DETAIL", text)
+            self.assertNotIn("详情：", text)
+            self.assertIn("EN-MESSAGE", text)
+        finally:
+            panel.deleteLater()
+
+    def test_chinese_audit_batch_keeps_chinese_after_switching_to_english(self) -> None:
+        """Scenario 2: a Chinese batch keeps its '详情：' prefix in English mode."""
+        from utils.logging_utils import OperationLog
+        from ui.panels import LogPanel
+
+        panel = LogPanel()
+        try:
+            i18n.set_language("zh_CN")
+            log = OperationLog(title="batch")
+            log.entries.append(self._entry("ZH-MESSAGE", "ZH-DETAIL"))
+            panel.append_log(log, "── ZH-HEADER ──")
+
+            i18n.set_language("en")
+            panel.refresh()
+            text = self._log_text(panel)
+
+            self.assertIn("详情： ZH-DETAIL", text)
+            self.assertNotIn("detail:", text)
+            self.assertIn("ZH-MESSAGE", text)
+        finally:
+            panel.deleteLater()
+
+    def test_new_audit_batch_uses_the_language_at_creation_time(self) -> None:
+        """Scenario 3: mixed history - each batch keeps the language it was written in."""
+        from utils.logging_utils import OperationLog
+        from ui.panels import LogPanel
+
+        panel = LogPanel()
+        try:
+            english = OperationLog(title="batch")
+            english.entries.append(self._entry("EN-MESSAGE", "EN-DETAIL"))
+            panel.append_log(english, "── EN-HEADER ──")
+
+            i18n.set_language("zh_CN")
+            chinese = OperationLog(title="batch")
+            chinese.entries.append(self._entry("ZH-MESSAGE", "ZH-DETAIL"))
+            panel.append_log(chinese, "── ZH-HEADER ──")
+
+            i18n.set_language("en")
+            panel.refresh()
+            text = self._log_text(panel)
+
+            self.assertIn("detail: EN-DETAIL", text)
+            self.assertIn("详情： ZH-DETAIL", text)
+            self.assertNotIn("详情： EN-DETAIL", text)
+            self.assertNotIn("detail: ZH-DETAIL", text)
+        finally:
+            panel.deleteLater()

@@ -154,7 +154,7 @@ tools.selfcheck.run(create_test_nodes=True)
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py
 ```
 
-预期输出 `Ran 171 tests ... OK`（其中 13 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
+预期输出 `Ran 174 tests ... OK`（其中 16 个需要 GUI 的 widget 测试在 batch 模式下跳过）。
 
 这些测试**不会**影响你正在使用的 Maya 会话：`mayapy` 是独立进程，使用自己的临时场景。
 

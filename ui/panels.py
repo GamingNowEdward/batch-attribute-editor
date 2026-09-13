@@ -467,20 +467,25 @@ class LogPanel(QtWidgets.QGroupBox):
         row.addWidget(self.clear_button)
         layout.addLayout(row)
 
-        # [(header, entries), ...]; the oldest batches are dropped beyond MAX_BATCHES
-        self._batches: List[Tuple[str, List[LogEntry]]] = []
+        # [(header, entries, detail_prefix), ...]; the prefix is resolved when the
+        # batch is created, so a later language switch cannot rewrite history.
+        # The oldest batches are dropped beyond MAX_BATCHES.
+        self._batches: List[Tuple[str, List[LogEntry], str]] = []
 
     # ------------------------------------------------------------ history
 
     def append_log(self, log, header: str) -> None:
         """Append one operation's audit trail, keeping the earlier history."""
-        self._batches.append((header, list(log.entries)))
+        self._batches.append((header, list(log.entries), tr("report.detail_prefix")))
         self._trim()
         self.refresh()
 
     def append(self, message: str) -> None:
         """Append a raw error line (UI-level fallback); rendered as an ERROR entry."""
-        self._batches.append(("", [LogEntry(level=LogLevel.ERROR, message=message)]))
+        self._batches.append(
+            ("", [LogEntry(level=LogLevel.ERROR, message=message)],
+             tr("report.detail_prefix"))
+        )
         self._trim()
         self.refresh()
 
@@ -510,7 +515,7 @@ class LogPanel(QtWidgets.QGroupBox):
     def refresh(self) -> None:
         """Redraw every retained batch (colours by level; failure details always shown)."""
         blocks: List[str] = []
-        for header, entries in self._batches:
+        for header, entries, detail_prefix in self._batches:
             if header:
                 blocks.append(f'<div style="color:{ACCENT}">{html.escape(header)}</div>')
             for entry in entries:
@@ -522,7 +527,7 @@ class LogPanel(QtWidgets.QGroupBox):
                 if entry.detail:
                     blocks.append(
                         f'<div style="color:{MUTED}">&nbsp;&nbsp;&nbsp;&nbsp;'
-                        f'{html.escape(tr("report.detail_prefix"))} '
+                        f'{html.escape(detail_prefix)} '
                         f'{html.escape(entry.detail)}</div>'
                     )
         if not blocks:

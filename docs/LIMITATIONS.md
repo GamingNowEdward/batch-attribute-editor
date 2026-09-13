@@ -12,7 +12,7 @@ made**, together with the measurements behind them. Every entry tries to give bo
 
 | Part | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 158 automated tests pass under mayapy on Maya 2024.2 (13 GUI tests skipped) |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 158 automated tests pass under mayapy on Maya 2024.2 (16 GUI tests skipped; 174 total) |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (150-node batch, partial-failure scenario) |
 | UI module imports and factory dispatch | ✅ verified automatically |
 | Localization (language switch / fallback / persistence / Core texts) | ✅ automated under mayapy; the widget-level retranslation was additionally smoke-verified with PySide6 6.11 (offscreen, fake `maya`) |
@@ -39,7 +39,7 @@ missing-node count.)
 
 **Why widget-level tests cannot be automated**: under `mayapy` / `standalone` a `QApplication`
 cannot be created — in testing, as soon as one was attempted the process exited immediately with
-`QWidget: Cannot create a QApplication`. Therefore the 13 widget tests in `test_ui_smoke.py` /
+`QWidget: Cannot create a QApplication`. Therefore the 16 widget tests in `test_ui_smoke.py` /
 `test_i18n.py` that need a QWidget are skipped automatically in batch mode, and the window and its
 interactions can only be confirmed in a real GUI session. (The language-switch retranslation pass
 was additionally exercised outside Maya with a real Qt application — system Python + PySide6 +

@@ -143,7 +143,7 @@ BatchAttributeEditor/      ← 把这个目录加入 sys.path
     utils/
         maya_utils.py      节点/plug 名称派生、UUID 复查
         logging_utils.py   双通道日志（用户可读 / 技术细节）
-    tests/                 171 个测试（mayapy 下运行）
+    tests/                 174 个测试（mayapy 下运行）
     tools/selfcheck.py     在真实 Maya 里运行的自检脚本
     docs/                  文档（安装 / 使用 / 架构 / 已知限制）
 ```
@@ -175,7 +175,7 @@ Core 层与部分 UI 层可在 Maya 自带的 `mayapy` 下完整自动化测试�
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-当前结果：**171 个测试全部通过**（其中 13 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
+当前结果：**174 个测试全部通过**（其中 16 个需要真实 GUI 的 widget 测试在 batch 模式下跳过）。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
@@ -186,7 +186,7 @@ Core 层与部分 UI 层可在 Maya 自带的 `mayapy` 下完整自动化测试�
 | `test_batch_setter.py` | 各类型批量写入、颜色不 clamp、multi 不新建元素、缺失/锁定/连接跳过、单点失败不中断整批、同名不同类型只改兼容节点 |
 | `test_undo.py` | 一次应用 = 一次撤销、重做、部分失败仍一次撤销、150 节点仍一次撤销、对照组证明 chunk 必要 |
 | `test_session.py` | 端到端工作流、预览统计自洽、缓存与刷新、1500+ 节点性能 |
-| `test_i18n.py` | 语言管理器切换 / 回退 / 格式化 / 复数、key 与占位符一致性、字面量 `tr("...")` key 扫描、QSettings 持久化（假后端 + 真实后端）、Core 报告文本、GUI 语言切换测试 |
+| `test_i18n.py` | 语言管理器切换 / 回退 / 格式化 / 复数、key 与占位符一致性、字面量 `tr("...")` key 扫描、QSettings 持久化（假后端 + 真实后端）、Core 报告文本、GUI 语言切换测试、审计日志语言冻结测试 |
 | `test_ui_smoke.py` | UI 模块导入、工厂注册表完整性、结果表模型；widget 测试在 GUI 会话中运行 |
 
 在真实 Maya GUI 里做一次端到端自检（会建临时节点并用完即删）：
@@ -204,7 +204,7 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | 部分 | 状态 |
 | --- | --- |
-| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销） | ✅ 171 个测试在 Maya 2024.2 mayapy 下通过（13 个 GUI 测试在 batch 模式下跳过） |
+| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销） | ✅ 174 个测试在 Maya 2024.2 mayapy 下通过（16 个 GUI 测试在 batch 模式下跳过） |
 | 撤销粒度（一次应用 = 一次撤销） | ✅ 实测验证（含 150 节点批量与部分失败场景） |
 | UI 模块导入与工厂分发 | ✅ 自动化验证 |
 | 本地化（语言切换 / 回退 / 持久化 / Core 文本） | ✅ mayapy 下自动化覆盖；控件级重译另用 PySide6 6.11（offscreen + fake `maya`）冒烟验证 |

@@ -167,7 +167,7 @@ Run this from the project root:
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py
 ```
 
-The expected output is `Ran 171 tests ... OK` (of which the 13 widget tests that need a GUI are
+The expected output is `Ran 174 tests ... OK` (of which the 16 widget tests that need a GUI are
 skipped in batch mode).
 
 These tests do **not** affect the Maya session you are working in: `mayapy` is a separate process

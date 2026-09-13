@@ -6,6 +6,9 @@
 
 ### 修复
 
+- 审计日志现在完整保留**创建时的语言**：`detail:` 前缀此前在 `LogPanel.refresh()` 时按*当前*语言
+  重新解析，切换语言会让同一条历史记录内部混用语言（例如英文条目出现中文「详情：」）；
+  现在前缀在批次写入时即被捕获（`ui/panels.py`），并为两个切换方向与混合历史新增回归测试
 - `ui/panels.py`：`SearchPanel` 的过滤器复选框现在等到全部创建完成后才连接 `toggled` 信号 ——
   此前构造期间的 `setChecked(True)` 会在其余复选框创建之前触发 `toggled`（PySide 会打印但吞掉
   该 `AttributeError`）
@@ -21,9 +24,9 @@
   `manager.py`（词条查找、English 回退、`{参数}` 格式化、`plural()`）、`en.py`（English reference
   词条，与原有英文字面量逐字一致）、`zh_cn.py`（简体中文；key 集合由测试强制与英文一致）
 - `ui/settings.py`：`LanguageSettings` —— 一个可注入后端的小型 QSettings 封装
-- `tests/test_i18n.py`：29 个测试 —— manager 切换 / 回退 / 格式化 / 复数、词条 key 与占位符
+- `tests/test_i18n.py`：32 个测试 —— manager 切换 / 回退 / 格式化 / 复数、词条 key 与占位符
   一致性、源码中字面量 `tr("...")` key 扫描、假后端与真实 QSettings 后端持久化、Core 报告文本、
-  以及 GUI 语言切换测试
+  GUI 语言切换测试，以及审计日志语言冻结测试（English→中文、中文→English、混合历史）
 
 ### 变更
 
@@ -42,7 +45,7 @@
 - README / ARCHITECTURE / USAGE / INSTALL / LIMITATIONS（中英）补充：本地化架构、语言选择器、
   持久化与重置方式、翻译与 Maya 数据的边界，以及本地化已知限制（审计日志语言、原始校验错误、
   类型标签保持英文）
-- 文档中的测试数量更新为 **171**（13 个 GUI 测试在 batch 模式下跳过）：README、INSTALL、
+- 文档中的测试数量更新为 **174**（16 个 GUI 测试在 batch 模式下跳过）：README、INSTALL、
   LIMITATIONS（中英）
 
 ## 2026-09-11

@@ -152,7 +152,7 @@ BatchAttributeEditor/      ← add this directory to sys.path
     utils/
         maya_utils.py      node/plug name derivation, UUID re-checks
         logging_utils.py   two-channel logging (user-readable / technical detail)
-    tests/                 171 tests (run under mayapy)
+    tests/                 174 tests (run under mayapy)
     tools/selfcheck.py     self-check script that runs inside a real Maya
     docs/                  documentation (install / usage / architecture / limitations)
 ```
@@ -187,7 +187,7 @@ To run a single module:
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" tests\run_tests.py -k undo
 ```
 
-Current result: **all 171 tests pass** (of which the 13 widget tests that need a real GUI are skipped
+Current result: **all 174 tests pass** (of which the 16 widget tests that need a real GUI are skipped
 in batch mode).
 
 | Test file | Coverage |
@@ -199,7 +199,7 @@ in batch mode).
 | `test_batch_setter.py` | Batch writing per type, colours not clamped, multi does not create new elements, missing/locked/connected skips, one failing node does not abort the batch, same name with different types only edits compatible nodes |
 | `test_undo.py` | One Apply = one Undo, Redo, still one Undo after a partial failure, still one Undo with 150 nodes, a control group proving the chunk is necessary |
 | `test_session.py` | End-to-end workflow, self-consistent preview statistics, cache and refresh, 1500+ node performance |
-| `test_i18n.py` | Language manager switching / fallback / formatting / plural, key + placeholder parity, literal `tr("...")` key scan, QSettings persistence (fake + real backends), Core report texts, GUI language-switch test |
+| `test_i18n.py` | Language manager switching / fallback / formatting / plural, key + placeholder parity, literal `tr("...")` key scan, QSettings persistence (fake + real backends), Core report texts, GUI language-switch test, audit-log language freeze tests |
 | `test_ui_smoke.py` | UI module imports, factory registry completeness, results table model; the widget tests run in a GUI session |
 
 To run one end-to-end self-check inside a real Maya GUI (it creates temporary nodes and deletes them
@@ -218,7 +218,7 @@ tools.selfcheck.run(create_test_nodes=True)
 
 | Area | Status |
 | --- | --- |
-| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 171 tests pass under Maya 2024.2 mayapy (13 GUI tests skipped in batch mode) |
+| Core (traversal / type resolution / validation / search / writing / Undo) | ✅ 174 tests pass under Maya 2024.2 mayapy (16 GUI tests skipped in batch mode) |
 | Undo granularity (one Apply = one Undo) | ✅ verified by measurement (including a 150-node batch and partial-failure scenarios) |
 | UI module import and factory dispatch | ✅ verified automatically |
 | Localization (language switch / fallback / persistence / Core texts) | ✅ automated under mayapy; the widget-level retranslation was additionally smoke-verified with PySide6 6.11 (offscreen, fake `maya`) |

@@ -11,7 +11,7 @@
 
 | 部分 | 状态 |
 | --- | --- |
-| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销（Undo）） | ✅ 158 个自动化测试在 Maya 2024.2 的 mayapy 下通过（13 个 GUI 测试跳过） |
+| Core（遍历 / 类型识别 / 校验 / 搜索 / 写入 / 撤销（Undo）） | ✅ 158 个自动化测试在 Maya 2024.2 的 mayapy 下通过（16 个 GUI 测试跳过，共 174 个） |
 | 撤销粒度（一次应用 = 一次撤销） | ✅ 实测验证（150 节点批量、部分失败场景） |
 | UI 模块导入与工厂分发 | ✅ 自动化验证 |
 | 本地化（语言切换 / 回退 / 持久化 / Core 文本） | ✅ mayapy 下自动化覆盖；控件级重译另用 PySide6 6.11（offscreen + fake `maya`）冒烟验证 |
@@ -37,7 +37,7 @@ All checks passed
 
 **为什么 widget 级测试不能自动化**：`mayapy` / `standalone` 下无法创建 `QApplication` ——
 实测中一旦尝试创建，进程会以 `QWidget: Cannot create a QApplication` 直接退出。
-因此 `test_ui_smoke.py` / `test_i18n.py` 里 13 个需要 QWidget 的测试在 batch 模式下被自动跳过，
+因此 `test_ui_smoke.py` / `test_i18n.py` 里 16 个需要 QWidget 的测试在 batch 模式下被自动跳过，
 窗口与交互只能靠真实 GUI 会话确认。（语言切换的重译路径另在 Maya 之外用真实 Qt 应用做过
 跨绑定冒烟验证：系统 Python + PySide6 + offscreen 平台，`maya` 包以假实现替代。）
 
